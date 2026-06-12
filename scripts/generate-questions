@@ -1,0 +1,5 @@
+#!/usr/bin/env python3
+from baseball_bench.cli import main
+
+raise SystemExit(main(["generate-questions"]))
+

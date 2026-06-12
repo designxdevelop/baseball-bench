@@ -1,0 +1,6 @@
+#!/usr/bin/env python3
+import sys
+
+from baseball_bench.cli import main
+
+raise SystemExit(main(["run-bench", *sys.argv[1:]]))

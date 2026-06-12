@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>baseball-bench leaderboard</title>
+    <style>
+      :root { color-scheme: light; font-family: "Iowan Old Style", Georgia, serif; }
+      body { margin: 0; padding: 40px; background: linear-gradient(180deg, #f6f0e7, #e7efe9); color: #1b2420; }
+      main { max-width: 980px; margin: 0 auto; }
+      h1 { font-size: 3rem; margin-bottom: 0.25rem; }
+      p { max-width: 60ch; }
+      table { width: 100%; border-collapse: collapse; margin-top: 32px; background: rgba(255,255,255,0.72); }
+      th, td { padding: 12px 14px; border-bottom: 1px solid rgba(27,36,32,0.12); text-align: left; }
+      th { font-size: 0.85rem; letter-spacing: 0.08em; text-transform: uppercase; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>baseball-bench</h1>
+      <p>Deterministic benchmark snapshots across analysis, in-game decisions, and a seeded sim league.</p>
+      <table>
+        <thead>
+          <tr><th>Model</th><th>Analysis Accuracy</th><th>Decision Mean WP Delta</th><th>League Elo</th><th>Overall</th></tr>
+        </thead>
+        <tbody><tr><td>sql-baseline</td><td>1.0</td><td>-</td><td>-</td><td>0.5</td></tr>
+<tr><td>wp-baseline</td><td>-</td><td>0.0</td><td>-</td><td>0.5</td></tr>
+<tr><td>conservative</td><td>-</td><td>-</td><td>1505.12</td><td>0.175</td></tr>
+<tr><td>aggressive</td><td>-</td><td>-</td><td>1500.58</td><td>0.168</td></tr>
+<tr><td>rulebook</td><td>-</td><td>-</td><td>1499.42</td><td>0.166</td></tr></tbody>
+      </table>
+    </main>
+  </body>
+</html>

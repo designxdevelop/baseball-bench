@@ -1,0 +1,144 @@
+{
+  "kind": "analysis",
+  "model": "sql-baseline",
+  "overall_accuracy": 1.0,
+  "question_set": "v1",
+  "sample_count": 10,
+  "samples": [
+    {
+      "expected_answer": "Mason Cole",
+      "id": "highest_batting_average_2025",
+      "metadata": {
+        "expected_answer": "Mason Cole",
+        "observed_answer": "Mason Cole",
+        "tolerance": null
+      },
+      "observed_answer": "Mason Cole",
+      "prompt": "Which player had the highest batting average in 2025 among hitters with at least 500 plate appearances?",
+      "score": 1.0,
+      "tier": "easy"
+    },
+    {
+      "expected_answer": "Tyler Grant",
+      "id": "most_home_runs_2025",
+      "metadata": {
+        "expected_answer": "Tyler Grant",
+        "observed_answer": "Tyler Grant",
+        "tolerance": null
+      },
+      "observed_answer": "Tyler Grant",
+      "prompt": "Which player hit the most home runs in 2025?",
+      "score": 1.0,
+      "tier": "easy"
+    },
+    {
+      "expected_answer": "Tyler Grant",
+      "id": "best_ops_2024",
+      "metadata": {
+        "expected_answer": "Tyler Grant",
+        "observed_answer": "Tyler Grant",
+        "tolerance": null
+      },
+      "observed_answer": "Tyler Grant",
+      "prompt": "Which player posted the best OPS in 2024 among hitters with at least 500 plate appearances?",
+      "score": 1.0,
+      "tier": "medium"
+    },
+    {
+      "expected_answer": "Austin Kings",
+      "id": "best_run_diff_2025",
+      "metadata": {
+        "expected_answer": "Austin Kings",
+        "observed_answer": "Austin Kings",
+        "tolerance": null
+      },
+      "observed_answer": "Austin Kings",
+      "prompt": "Which team had the best run differential in the 2025 seed schedule?",
+      "score": 1.0,
+      "tier": "medium"
+    },
+    {
+      "expected_answer": "Victor Hale",
+      "id": "best_k_per_9_2025",
+      "metadata": {
+        "expected_answer": "Victor Hale",
+        "observed_answer": "Victor Hale",
+        "tolerance": null
+      },
+      "observed_answer": "Victor Hale",
+      "prompt": "Which 2025 starting pitcher had the highest strikeouts per nine innings among pitchers with at least 180 innings pitched?",
+      "score": 1.0,
+      "tier": "medium"
+    },
+    {
+      "expected_answer": "0.369",
+      "id": "noah_kim_obp_2025",
+      "metadata": {
+        "expected_answer": "0.369",
+        "observed_answer": "0.369",
+        "tolerance": 0.001
+      },
+      "observed_answer": "0.369",
+      "prompt": "What was Noah Kim's on-base percentage in 2025? Return just the decimal value.",
+      "score": 1.0,
+      "tier": "hard"
+    },
+    {
+      "expected_answer": "97",
+      "id": "tyler_grant_total_hr",
+      "metadata": {
+        "expected_answer": "97",
+        "observed_answer": "97",
+        "tolerance": null
+      },
+      "observed_answer": "97",
+      "prompt": "How many total home runs did Tyler Grant hit from 2023 through 2025 inclusive?",
+      "score": 1.0,
+      "tier": "easy"
+    },
+    {
+      "expected_answer": "3",
+      "id": "count_ops_850_2025",
+      "metadata": {
+        "expected_answer": "3",
+        "observed_answer": "3",
+        "tolerance": null
+      },
+      "observed_answer": "3",
+      "prompt": "How many 2025 hitters reached at least a .850 OPS while also recording at least 450 plate appearances?",
+      "score": 1.0,
+      "tier": "hard"
+    },
+    {
+      "expected_answer": "Ryan Sato",
+      "id": "best_reliever_era_2025",
+      "metadata": {
+        "expected_answer": "Ryan Sato",
+        "observed_answer": "Ryan Sato",
+        "tolerance": null
+      },
+      "observed_answer": "Ryan Sato",
+      "prompt": "Which 2025 reliever had the lowest ERA among relievers with at least 60 innings pitched?",
+      "score": 1.0,
+      "tier": "medium"
+    },
+    {
+      "expected_answer": "Austin Kings",
+      "id": "best_win_pct_2025",
+      "metadata": {
+        "expected_answer": "Austin Kings",
+        "observed_answer": "Austin Kings",
+        "tolerance": null
+      },
+      "observed_answer": "Austin Kings",
+      "prompt": "Which team had the best winning percentage in the 2025 seed schedule?",
+      "score": 1.0,
+      "tier": "hard"
+    }
+  ],
+  "tier_accuracy": {
+    "easy": 1.0,
+    "hard": 1.0,
+    "medium": 1.0
+  }
+}

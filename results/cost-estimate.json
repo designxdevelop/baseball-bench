@@ -1,0 +1,106 @@
+{
+  "analysis_samples": 10,
+  "assumptions": {
+    "analysis_input_tokens": 900,
+    "analysis_output_tokens": 120,
+    "decisions_input_tokens": 160,
+    "decisions_output_tokens": 40,
+    "league_input_tokens": 140,
+    "league_output_tokens": 35
+  },
+  "average_cost_usd_per_model": 2.708,
+  "decision_samples": 8,
+  "estimated_decisions_per_game": 32.5,
+  "games_per_matchup": 6,
+  "kind": "cost_estimate",
+  "models": [
+    "openrouter/anthropic/claude-fable-5",
+    "openrouter/anthropic/claude-opus-4.8",
+    "openrouter/openai/gpt-5.5",
+    "openrouter/deepseek/deepseek-v4-pro",
+    "openrouter/nvidia/nemotron-3-ultra-550b-a55b",
+    "openrouter/qwen/qwen3.6-35b-a3b"
+  ],
+  "per_model": [
+    {
+      "analysis_cost_usd": 0.15,
+      "decisions_cost_usd": 0.0288,
+      "estimated_league_decisions_per_model": 2340.0,
+      "league_cost_usd": 7.371,
+      "league_games_per_model": 72,
+      "model": "openrouter/anthropic/claude-fable-5",
+      "pricing_per_token": {
+        "completion": 5e-05,
+        "prompt": 1e-05
+      },
+      "total_cost_usd": 7.5498
+    },
+    {
+      "analysis_cost_usd": 0.075,
+      "decisions_cost_usd": 0.0144,
+      "estimated_league_decisions_per_model": 2340.0,
+      "league_cost_usd": 3.6855,
+      "league_games_per_model": 72,
+      "model": "openrouter/anthropic/claude-opus-4.8",
+      "pricing_per_token": {
+        "completion": 2.5e-05,
+        "prompt": 5e-06
+      },
+      "total_cost_usd": 3.7749
+    },
+    {
+      "analysis_cost_usd": 0.081,
+      "decisions_cost_usd": 0.016,
+      "estimated_league_decisions_per_model": 2340.0,
+      "league_cost_usd": 4.095,
+      "league_games_per_model": 72,
+      "model": "openrouter/openai/gpt-5.5",
+      "pricing_per_token": {
+        "completion": 3e-05,
+        "prompt": 5e-06
+      },
+      "total_cost_usd": 4.192
+    },
+    {
+      "analysis_cost_usd": 0.005,
+      "decisions_cost_usd": 0.0008,
+      "estimated_league_decisions_per_model": 2340.0,
+      "league_cost_usd": 0.2138,
+      "league_games_per_model": 72,
+      "model": "openrouter/deepseek/deepseek-v4-pro",
+      "pricing_per_token": {
+        "completion": 8.7e-07,
+        "prompt": 4.35e-07
+      },
+      "total_cost_usd": 0.2196
+    },
+    {
+      "analysis_cost_usd": 0.0075,
+      "decisions_cost_usd": 0.0014,
+      "estimated_league_decisions_per_model": 2340.0,
+      "league_cost_usd": 0.3685,
+      "league_games_per_model": 72,
+      "model": "openrouter/nvidia/nemotron-3-ultra-550b-a55b",
+      "pricing_per_token": {
+        "completion": 2.5e-06,
+        "prompt": 5e-07
+      },
+      "total_cost_usd": 0.3775
+    },
+    {
+      "analysis_cost_usd": 0.0026,
+      "decisions_cost_usd": 0.0005,
+      "estimated_league_decisions_per_model": 2340.0,
+      "league_cost_usd": 0.131,
+      "league_games_per_model": 72,
+      "model": "openrouter/qwen/qwen3.6-35b-a3b",
+      "pricing_per_token": {
+        "completion": 1e-06,
+        "prompt": 1.5e-07
+      },
+      "total_cost_usd": 0.1341
+    }
+  ],
+  "pricing_source": "fallback_2026_06_11",
+  "total_cost_usd": 16.2478
+}

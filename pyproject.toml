@@ -1,0 +1,36 @@
+[project]
+name = "baseball-bench"
+version = "0.1.0"
+description = "A deterministic baseball benchmark for evaluating AI models."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "duckdb>=1.1,<2",
+  "inspect-ai==0.3.239",
+  "pydantic>=2.8,<3",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.2,<9",
+]
+
+[project.scripts]
+baseball-bench = "baseball_bench.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/baseball_bench"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/baseball_bench/data/schema.md" = "baseball_bench/data/schema.md"
+"src/baseball_bench/data/seed/seed_data.json" = "baseball_bench/data/seed/seed_data.json"
+"src/baseball_bench/tracks/decisions/situations/v1.json" = "baseball_bench/tracks/decisions/situations/v1.json"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+

@@ -1,0 +1,215 @@
+[
+  {
+    "id": "s001",
+    "description": "Tie game in the seventh with a runner on first and your fastest bench bat available.",
+    "state": {
+      "inning": 7,
+      "half": "top",
+      "outs": 0,
+      "runners": {"first": true, "second": false, "third": false},
+      "home_team": "Brooklyn Captains",
+      "away_team": "Denver Foxes",
+      "batting_team": "Denver Foxes",
+      "fielding_team": "Brooklyn Captains",
+      "home_score": 3,
+      "away_score": 3,
+      "batter_name": "Diego Ruiz",
+      "pitcher_name": "Ben Ortiz",
+      "leverage_index": 2.0,
+      "bench": [{"player_id": "p011", "name": "Marco Vega", "bats": "R"}],
+      "bullpen": []
+    },
+    "options": [
+      {"action_id": "let_hit", "action_type": "let_hit", "label": "Let Diego Ruiz hit", "expected_win_prob": 0.52},
+      {"action_id": "steal", "action_type": "steal", "label": "Attempt a steal of second base", "expected_win_prob": 0.56},
+      {"action_id": "bunt", "action_type": "bunt", "label": "Sacrifice bunt", "expected_win_prob": 0.49}
+    ]
+  },
+  {
+    "id": "s002",
+    "description": "Bottom of the seventh, home team up one with a runner on second and one out.",
+    "state": {
+      "inning": 7,
+      "half": "bottom",
+      "outs": 1,
+      "runners": {"first": false, "second": true, "third": false},
+      "home_team": "Austin Kings",
+      "away_team": "Brooklyn Captains",
+      "batting_team": "Austin Kings",
+      "fielding_team": "Brooklyn Captains",
+      "home_score": 4,
+      "away_score": 3,
+      "batter_name": "Javier Soto",
+      "pitcher_name": "Jack Moreno",
+      "leverage_index": 1.7,
+      "bench": [{"player_id": "p010", "name": "Alex Park", "bats": "S"}],
+      "bullpen": []
+    },
+    "options": [
+      {"action_id": "let_hit", "action_type": "let_hit", "label": "Let Javier Soto hit", "expected_win_prob": 0.67},
+      {"action_id": "bunt", "action_type": "bunt", "label": "Bunt the runner to third", "expected_win_prob": 0.61},
+      {"action_id": "pinch_hit:p010", "action_type": "pinch_hit", "label": "Pinch hit with Alex Park", "expected_win_prob": 0.63}
+    ]
+  },
+  {
+    "id": "s003",
+    "description": "Top of the eighth, trailing by one with runners on first and second and no outs.",
+    "state": {
+      "inning": 8,
+      "half": "top",
+      "outs": 0,
+      "runners": {"first": true, "second": true, "third": false},
+      "home_team": "Denver Foxes",
+      "away_team": "Austin Kings",
+      "batting_team": "Austin Kings",
+      "fielding_team": "Denver Foxes",
+      "home_score": 5,
+      "away_score": 4,
+      "batter_name": "Ethan Brooks",
+      "pitcher_name": "Ryan Sato",
+      "leverage_index": 2.3,
+      "bench": [{"player_id": "p010", "name": "Alex Park", "bats": "S"}],
+      "bullpen": []
+    },
+    "options": [
+      {"action_id": "let_hit", "action_type": "let_hit", "label": "Let Ethan Brooks hit", "expected_win_prob": 0.44},
+      {"action_id": "bunt", "action_type": "bunt", "label": "Play for one run with a bunt", "expected_win_prob": 0.41},
+      {"action_id": "pinch_hit:p010", "action_type": "pinch_hit", "label": "Pinch hit with Alex Park", "expected_win_prob": 0.49}
+    ]
+  },
+  {
+    "id": "s004",
+    "description": "Bottom of the eighth, tie game with bases loaded and one out.",
+    "state": {
+      "inning": 8,
+      "half": "bottom",
+      "outs": 1,
+      "runners": {"first": true, "second": true, "third": true},
+      "home_team": "Brooklyn Captains",
+      "away_team": "Denver Foxes",
+      "batting_team": "Brooklyn Captains",
+      "fielding_team": "Denver Foxes",
+      "home_score": 4,
+      "away_score": 4,
+      "batter_name": "Noah Kim",
+      "pitcher_name": "Ryan Sato",
+      "leverage_index": 2.6,
+      "bench": [{"player_id": "p010", "name": "Alex Park", "bats": "S"}],
+      "bullpen": []
+    },
+    "options": [
+      {"action_id": "let_hit", "action_type": "let_hit", "label": "Let Noah Kim hit", "expected_win_prob": 0.66},
+      {"action_id": "pinch_hit:p010", "action_type": "pinch_hit", "label": "Pinch hit with Alex Park", "expected_win_prob": 0.62}
+    ]
+  },
+  {
+    "id": "s005",
+    "description": "Top of the ninth protecting a one-run lead with traffic on the bases.",
+    "state": {
+      "inning": 9,
+      "half": "top",
+      "outs": 1,
+      "runners": {"first": false, "second": true, "third": true},
+      "home_team": "Brooklyn Captains",
+      "away_team": "Austin Kings",
+      "batting_team": "Austin Kings",
+      "fielding_team": "Brooklyn Captains",
+      "home_score": 5,
+      "away_score": 4,
+      "batter_name": "Tyler Grant",
+      "pitcher_name": "Ben Ortiz",
+      "leverage_index": 3.0,
+      "bench": [],
+      "bullpen": [
+        {"player_id": "p104", "name": "Jack Moreno", "throws": "R", "stamina": 84},
+        {"player_id": "p105", "name": "Ryan Sato", "throws": "R", "stamina": 88}
+      ]
+    },
+    "options": [
+      {"action_id": "stay_with_pitcher", "action_type": "stay_with_pitcher", "label": "Leave Ben Ortiz in the game", "expected_win_prob": 0.69},
+      {"action_id": "go_to_bullpen:p104", "action_type": "go_to_bullpen", "label": "Bring in Jack Moreno", "expected_win_prob": 0.74},
+      {"action_id": "go_to_bullpen:p105", "action_type": "go_to_bullpen", "label": "Bring in Ryan Sato", "expected_win_prob": 0.72}
+    ]
+  },
+  {
+    "id": "s006",
+    "description": "Bottom of the ninth, home team trails by one with a runner on first and one out.",
+    "state": {
+      "inning": 9,
+      "half": "bottom",
+      "outs": 1,
+      "runners": {"first": true, "second": false, "third": false},
+      "home_team": "Denver Foxes",
+      "away_team": "Brooklyn Captains",
+      "batting_team": "Denver Foxes",
+      "fielding_team": "Brooklyn Captains",
+      "home_score": 2,
+      "away_score": 3,
+      "batter_name": "Lucas Price",
+      "pitcher_name": "Jack Moreno",
+      "leverage_index": 2.8,
+      "bench": [{"player_id": "p011", "name": "Marco Vega", "bats": "R"}],
+      "bullpen": []
+    },
+    "options": [
+      {"action_id": "let_hit", "action_type": "let_hit", "label": "Let Lucas Price hit", "expected_win_prob": 0.36},
+      {"action_id": "steal", "action_type": "steal", "label": "Try to steal second base", "expected_win_prob": 0.39},
+      {"action_id": "pinch_hit:p011", "action_type": "pinch_hit", "label": "Pinch hit with Marco Vega", "expected_win_prob": 0.42}
+    ]
+  },
+  {
+    "id": "s007",
+    "description": "Eighth inning, tie game, starter is tiring and the bullpen is fresh.",
+    "state": {
+      "inning": 8,
+      "half": "top",
+      "outs": 0,
+      "runners": {"first": true, "second": false, "third": false},
+      "home_team": "Austin Kings",
+      "away_team": "Denver Foxes",
+      "batting_team": "Denver Foxes",
+      "fielding_team": "Austin Kings",
+      "home_score": 3,
+      "away_score": 3,
+      "batter_name": "Diego Ruiz",
+      "pitcher_name": "Victor Hale",
+      "leverage_index": 2.2,
+      "bench": [],
+      "bullpen": [
+        {"player_id": "p106", "name": "Noah Evans", "throws": "L", "stamina": 91},
+        {"player_id": "p104", "name": "Jack Moreno", "throws": "R", "stamina": 85}
+      ]
+    },
+    "options": [
+      {"action_id": "stay_with_pitcher", "action_type": "stay_with_pitcher", "label": "Leave Victor Hale in", "expected_win_prob": 0.48},
+      {"action_id": "go_to_bullpen:p106", "action_type": "go_to_bullpen", "label": "Call on Noah Evans", "expected_win_prob": 0.54},
+      {"action_id": "go_to_bullpen:p104", "action_type": "go_to_bullpen", "label": "Call on Jack Moreno", "expected_win_prob": 0.51}
+    ]
+  },
+  {
+    "id": "s008",
+    "description": "Bottom of the ninth, tie game, two outs and the winning run already on second.",
+    "state": {
+      "inning": 9,
+      "half": "bottom",
+      "outs": 2,
+      "runners": {"first": false, "second": true, "third": false},
+      "home_team": "Austin Kings",
+      "away_team": "Brooklyn Captains",
+      "batting_team": "Austin Kings",
+      "fielding_team": "Brooklyn Captains",
+      "home_score": 4,
+      "away_score": 4,
+      "batter_name": "Javier Soto",
+      "pitcher_name": "Jack Moreno",
+      "leverage_index": 2.9,
+      "bench": [{"player_id": "p010", "name": "Alex Park", "bats": "S"}],
+      "bullpen": []
+    },
+    "options": [
+      {"action_id": "let_hit", "action_type": "let_hit", "label": "Let Javier Soto swing away", "expected_win_prob": 0.58},
+      {"action_id": "pinch_hit:p010", "action_type": "pinch_hit", "label": "Pinch hit with Alex Park", "expected_win_prob": 0.55}
+    ]
+  }
+]
+
