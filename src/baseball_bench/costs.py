@@ -20,6 +20,7 @@ DEFAULT_OPENROUTER_MODELS = [
     "deepseek/deepseek-v4-pro",
     "nvidia/nemotron-3-ultra-550b-a55b",
     "qwen/qwen3.6-35b-a3b",
+    "google/gemini-3.1-pro-preview",
 ]
 
 # Fallback prices are USD per token, copied from live OpenRouter model data on 2026-06-11.
@@ -30,6 +31,7 @@ FALLBACK_PRICING: dict[str, dict[str, float]] = {
     "openrouter/deepseek/deepseek-v4-pro": {"prompt": 0.000000435, "completion": 0.00000087},
     "openrouter/nvidia/nemotron-3-ultra-550b-a55b": {"prompt": 0.0000005, "completion": 0.0000025},
     "openrouter/qwen/qwen3.6-35b-a3b": {"prompt": 0.00000015, "completion": 0.000001},
+    "openrouter/google/gemini-3.1-pro-preview": {"prompt": 0.000002, "completion": 0.000012},
 }
 
 
@@ -115,6 +117,7 @@ def estimate_costs(
     model_names: list[str],
     *,
     games_per_matchup: int = 6,
+    league_games: int | None = None,
     assumptions: TrackAssumptions | None = None,
     allow_network: bool = True,
 ) -> dict[str, Any]:
@@ -129,8 +132,15 @@ def estimate_costs(
     if manager_count == 0:
         raise ValueError("No external OpenRouter models were provided.")
 
-    # Current league format: every manager plays every other manager home and away.
-    league_games_per_model = 2 * manager_count * games_per_matchup
+    # Controlled league adds the rulebook manager. A sampled schedule gives each
+    # external model roughly an equal share of home/away slots.
+    total_managers = manager_count + 1
+    if league_games is None:
+        league_games_per_model = 2 * manager_count * games_per_matchup
+        estimated_total_league_games = total_managers * (total_managers - 1) * games_per_matchup
+    else:
+        estimated_total_league_games = league_games
+        league_games_per_model = (2 * league_games) / total_managers
     estimated_decisions_per_game = 32.5
     league_decisions_per_model = league_games_per_model * estimated_decisions_per_game
 
@@ -181,6 +191,8 @@ def estimate_costs(
         "pricing_source": pricing_source,
         "models": external_models,
         "games_per_matchup": games_per_matchup,
+        "league_games": league_games,
+        "estimated_total_league_games": round(estimated_total_league_games, 1),
         "analysis_samples": analysis_samples,
         "decision_samples": decision_samples,
         "estimated_decisions_per_game": estimated_decisions_per_game,

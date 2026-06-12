@@ -80,14 +80,17 @@ baseball-bench/
 - The WP model is the bench's referee, not a claim about perfect baseball strategy — it's consistent across models, which is what a benchmark needs.
 - Target: ~300 situations, versioned like Track 1.
 
-## Track 3 — Sim League (showpiece, build last)
+## Track 3 — GM + Sim League (showpiece, build last)
+
+**Active plan:** see [2026-06-11-gm-manager-league-redesign.md](/Users/austin/code/dxd/baseball-bench/docs/specs/2026-06-11-gm-manager-league-redesign.md). The original sim league direction has been expanded into a GM Track, Controlled Manager League, and Open League so roster construction and in-game management can be scored separately.
 
 **What it measures:** sustained agency over long horizons, strategy, adaptation.
 
 - **Engine:** plate-appearance simulator using log5/Markov-chain outcomes from real player season stats (e.g. 2025 rosters). Seeded RNG: identical seeds + identical decisions → identical games.
-- **LLM managers** use the same decision interface as Track 2: set lineups pre-game, make in-game calls at decision points (the engine only consults the manager at non-trivial junctures to keep token costs sane — roughly 10–20 decisions per game).
-- **Format:** round-robin season between models (each managing an identical-talent or drafted team), Elo ratings + standings. A baseline "rulebook manager" bot (sensible heuristics) anchors the ratings.
-- **Cost control:** configurable season length; a 4-model round robin at ~20 games each is the starting point.
+- **GM Track:** each model builds a roster from the same broad player pool under explicit constraints.
+- **Controlled Manager League:** each model manages equivalent talent with a pregame manager plan plus a hard cap on live high-leverage calls.
+- **Open League:** each model uses its own GM-built roster and manager plan in a labeled showpiece competition.
+- **Cost control:** default league schedules are sampled and capped; full round-robin is opt-in only.
 
 ## Running the Bench
 
@@ -129,5 +132,6 @@ Each phase ends with the bench in a runnable, useful state.
 
 ## Open Questions (deferred, not blockers)
 
-- Whether Track 3 teams are identical-talent (pure strategy test) or drafted (adds roster-building skill). Default: identical-talent for v1.
+- Exact GM roster projection formula and whether to add budget/player-value constraints in v1.
+- Whether Open League contributes to the overall score or remains a separate showpiece leaderboard.
 - Statcast pitch-level data as a future Track 1 difficulty tier.

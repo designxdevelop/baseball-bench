@@ -1,6 +1,6 @@
 {
   "checksum": "4e8f28c85cc3da1625f081aaed3835ccfd351f2ce8beefc98114bc411de83ec8",
-  "database_path": "test_league_is_deterministic_f0/baseball.duckdb",
+  "database_path": "test_manager_plan_preserves_bu0/baseball.duckdb",
   "seed_hash": "86a691f987f45ef8164a54b833f844cb76431e5d0d5ff07ab369bda79a2e3b33",
   "table_counts": {
     "batting": 29,

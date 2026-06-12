@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+from random import Random
 from statistics import mean
+from hashlib import sha256
 
 from baseball_bench.data import connect_read_only
-from pathlib import Path
 
 from baseball_bench.paths import DATA_DB_PATH, RESULTS_DIR
 from baseball_bench.tracks.league.engine import HitterProfile, PitcherProfile, TeamRoster, simulate_game
@@ -36,7 +39,9 @@ def _build_identical_roster(database_path: Path | None = None) -> TeamRoster:
                 (b.hits - b.doubles - b.triples - b.home_runs) as singles,
                 b.doubles,
                 b.triples,
-                b.home_runs
+                b.home_runs,
+                p.bats,
+                p.primary_position
               from batting b
               join players p on p.player_id = b.player_id
               where b.season = 2025 and p.primary_position not in ('SP', 'RP')
@@ -56,7 +61,8 @@ def _build_identical_roster(database_path: Path | None = None) -> TeamRoster:
                 pi.strikeouts,
                 pi.hits_allowed,
                 pi.home_runs_allowed,
-                case when pi.games_started > 0 then 'SP' else 'RP' end as role
+                case when pi.games_started > 0 then 'SP' else 'RP' end as role,
+                p.throws
               from pitching pi
               join players p on p.player_id = pi.player_id
               where pi.season = 2025
@@ -70,7 +76,64 @@ def _build_identical_roster(database_path: Path | None = None) -> TeamRoster:
     bench = hitter_profiles[9:11]
     starter = max((pitcher for pitcher in pitcher_profiles if pitcher.role == "SP"), key=lambda pitcher: pitcher.strikeouts)
     bullpen = sorted((pitcher for pitcher in pitcher_profiles if pitcher.role == "RP"), key=lambda pitcher: pitcher.strikeouts, reverse=True)
-    return TeamRoster(lineup=lineup, bench=bench, starter=starter, bullpen=bullpen)
+    bullpen_roles = _default_bullpen_roles(bullpen)
+    return TeamRoster(lineup=lineup, bench=bench, starter=starter, bullpen=bullpen, bullpen_roles=bullpen_roles)
+
+
+def build_controlled_roster(database_path: Path | None = None) -> TeamRoster:
+    return _build_identical_roster(database_path=database_path)
+
+
+def _park_factor_for_manager(manager_name: str) -> float:
+    bucket = int(sha256(manager_name.encode("utf-8")).hexdigest()[:4], 16) % 9
+    return round(0.92 + (bucket * 0.02), 3)
+
+
+def _with_home_park(roster: TeamRoster, manager_name: str) -> TeamRoster:
+    return TeamRoster(
+        lineup=roster.lineup,
+        bench=roster.bench,
+        starter=roster.starter,
+        bullpen=roster.bullpen,
+        park_factor=_park_factor_for_manager(manager_name),
+        bullpen_roles=roster.bullpen_roles,
+    )
+
+
+def _default_bullpen_roles(bullpen: list[PitcherProfile]) -> dict[str, str]:
+    return {
+        pitcher.player_id: (
+            "closer"
+            if index == 0
+            else "setup"
+            if index == 1
+            else "middle"
+            if index <= 3
+            else "long"
+        )
+        for index, pitcher in enumerate(bullpen)
+    }
+
+
+def _bullpen_rest_for_roster(
+    bullpen_rest_by_model: dict[str, dict[str, int]],
+    model_name: str,
+    roster: TeamRoster,
+) -> dict[str, int]:
+    rest = bullpen_rest_by_model.setdefault(model_name, {})
+    for arm in roster.bullpen:
+        rest.setdefault(arm.player_id, 100)
+    stale_ids = set(rest) - {arm.player_id for arm in roster.bullpen}
+    for player_id in stale_ids:
+        rest.pop(player_id, None)
+    return rest
+
+
+def _recover_bullpen(rest: dict[str, int], roster: TeamRoster, recovery: int = 18) -> dict[str, int]:
+    recovered = dict(rest)
+    for arm in roster.bullpen:
+        recovered[arm.player_id] = min(100, recovered.get(arm.player_id, 100) + recovery)
+    return recovered
 
 
 def _update_elo(winner: Standing, loser: Standing, k_factor: float = 20.0) -> None:
@@ -127,56 +190,17 @@ def _build_head_to_head(
     return head_to_head
 
 
-def run_league(
-    model_names: list[str],
-    games_per_matchup: int = 6,
-    seed: int = 7,
-    database_path: Path | None = None,
-    output_dir: Path = RESULTS_DIR,
-    write_latest: bool = True,
-) -> dict[str, object]:
-    if len(model_names) < 2:
-        raise ValueError("League requires at least two managers.")
-    managers = [build_manager(name) for name in model_names]
-    roster = _build_identical_roster(database_path=database_path)
-    standings = {manager.name: Standing(name=manager.name) for manager in managers}
-    games: list[dict[str, object]] = []
-    game_index = 0
-    for i, home_manager in enumerate(managers):
-        for j, away_manager in enumerate(managers):
-            if i == j:
-                continue
-            for _ in range(games_per_matchup):
-                game_index += 1
-                result = simulate_game(home_manager, away_manager, roster, roster, seed + game_index)
-                home = standings[result.home_manager]
-                away = standings[result.away_manager]
-                home.runs_for += result.home_score
-                home.runs_against += result.away_score
-                away.runs_for += result.away_score
-                away.runs_against += result.home_score
-                if result.home_score > result.away_score:
-                    home.wins += 1
-                    away.losses += 1
-                    _update_elo(home, away)
-                    winner = home.name
-                else:
-                    away.wins += 1
-                    home.losses += 1
-                    _update_elo(away, home)
-                    winner = away.name
-                games.append(
-                    {
-                        "game_number": game_index,
-                        "home": result.home_manager,
-                        "away": result.away_manager,
-                        "home_score": result.home_score,
-                        "away_score": result.away_score,
-                        "winner": winner,
-                        "decision_count": len(result.decision_log),
-                    }
-                )
-    standings_table = [
+def _league_result_filename(model_names: list[str]) -> str:
+    return f"league-{'-'.join(model.replace('/', '-') for model in model_names)}.json"
+
+
+def _league_progress_filename(model_names: list[str], league_kind: str) -> str:
+    prefix = league_kind.replace("_", "-")
+    return f"{prefix}-progress-{'-'.join(model.replace('/', '-') for model in model_names)}.json"
+
+
+def _standings_table(standings: dict[str, Standing]) -> list[dict[str, object]]:
+    return [
         {
             "model": standing.name,
             "wins": standing.wins,
@@ -191,17 +215,210 @@ def run_league(
             reverse=True,
         )
     ]
-    summary = {
-        "kind": "league",
+
+
+def _write_league_progress(
+    path: Path,
+    *,
+    model_names: list[str],
+    games_per_matchup: int,
+    league_kind: str,
+    started_at: str,
+    status: str,
+    standings: dict[str, Standing],
+    games: list[dict[str, object]],
+    total_games: int,
+    current_game: dict[str, object] | None,
+) -> None:
+    completed_games = len(games)
+    payload = {
+        "kind": f"{league_kind}_progress",
+        "league_kind": league_kind,
+        "status": status,
+        "started_at": started_at,
+        "updated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
         "models": model_names,
         "games_per_matchup": games_per_matchup,
+        "total_games": total_games,
+        "completed_games": completed_games,
+        "remaining_games": max(total_games - completed_games, 0),
+        "current_game": current_game,
+        "last_completed_game": games[-1] if games else None,
+        "standings": _standings_table(standings),
+        "head_to_head": _build_head_to_head(model_names, games),
+    }
+    write_json(path, payload)
+
+
+def _build_schedule(
+    managers,
+    *,
+    games_per_matchup: int,
+    seed: int,
+    league_games: int | None,
+):
+    if games_per_matchup < 1:
+        raise ValueError("games_per_matchup must be at least 1.")
+    if league_games is not None and league_games < 1:
+        raise ValueError("league_games must be at least 1 when provided.")
+
+    full_schedule = [
+        (home_manager, away_manager)
+        for home_manager in managers
+        for away_manager in managers
+        if home_manager != away_manager
+        for _ in range(games_per_matchup)
+    ]
+    if league_games is None:
+        return full_schedule, "full"
+
+    sampled_schedule = list(full_schedule)
+    Random(seed).shuffle(sampled_schedule)
+    return sampled_schedule[: min(league_games, len(sampled_schedule))], "sampled"
+
+
+def run_league(
+    model_names: list[str],
+    games_per_matchup: int = 6,
+    seed: int = 7,
+    league_games: int | None = None,
+    league_kind: str = "controlled_league",
+    rosters_by_model: dict[str, TeamRoster] | None = None,
+    database_path: Path | None = None,
+    output_dir: Path = RESULTS_DIR,
+    write_latest: bool = True,
+) -> dict[str, object]:
+    if len(model_names) < 2:
+        raise ValueError("League requires at least two managers.")
+    managers = [build_manager(name) for name in model_names]
+    default_roster = _build_identical_roster(database_path=database_path)
+    standings = {manager.name: Standing(name=manager.name) for manager in managers}
+    games: list[dict[str, object]] = []
+    bullpen_rest_by_model: dict[str, dict[str, int]] = {}
+    schedule, schedule_mode = _build_schedule(
+        managers,
+        games_per_matchup=games_per_matchup,
+        seed=seed,
+        league_games=league_games,
+    )
+    total_games = len(schedule)
+    started_at = datetime.now().astimezone().isoformat(timespec="seconds")
+    progress_path = output_dir / _league_progress_filename(model_names, league_kind)
+    _write_league_progress(
+        progress_path,
+        model_names=model_names,
+        games_per_matchup=games_per_matchup,
+        league_kind=league_kind,
+        started_at=started_at,
+        status="running",
+        standings=standings,
+        games=games,
+        total_games=total_games,
+        current_game=None,
+    )
+    for game_index, (home_manager, away_manager) in enumerate(schedule, start=1):
+        current_game = {
+            "game_number": game_index,
+            "home": home_manager.name,
+            "away": away_manager.name,
+            "started_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+        }
+        _write_league_progress(
+            progress_path,
+            model_names=model_names,
+            games_per_matchup=games_per_matchup,
+            league_kind=league_kind,
+            started_at=started_at,
+            status="running",
+            standings=standings,
+            games=games,
+            total_games=total_games,
+            current_game=current_game,
+        )
+        home_roster = _with_home_park(
+            (rosters_by_model or {}).get(home_manager.name, default_roster),
+            home_manager.name,
+        )
+        away_roster = (rosters_by_model or {}).get(away_manager.name, default_roster)
+        result = simulate_game(
+            home_manager,
+            away_manager,
+            home_roster,
+            away_roster,
+            seed + game_index,
+            home_bullpen_rest=_bullpen_rest_for_roster(bullpen_rest_by_model, home_manager.name, home_roster),
+            away_bullpen_rest=_bullpen_rest_for_roster(bullpen_rest_by_model, away_manager.name, away_roster),
+        )
+        bullpen_rest_by_model[home_manager.name] = _recover_bullpen(result.home_bullpen_rest, home_roster)
+        bullpen_rest_by_model[away_manager.name] = _recover_bullpen(result.away_bullpen_rest, away_roster)
+        home = standings[result.home_manager]
+        away = standings[result.away_manager]
+        home.runs_for += result.home_score
+        home.runs_against += result.away_score
+        away.runs_for += result.away_score
+        away.runs_against += result.home_score
+        if result.home_score > result.away_score:
+            home.wins += 1
+            away.losses += 1
+            _update_elo(home, away)
+            winner = home.name
+        else:
+            away.wins += 1
+            home.losses += 1
+            _update_elo(away, home)
+            winner = away.name
+        games.append(
+            {
+                "game_number": game_index,
+                "home": result.home_manager,
+                "away": result.away_manager,
+                "home_score": result.home_score,
+                "away_score": result.away_score,
+                "winner": winner,
+                "decision_count": len(result.decision_log),
+                "home_bullpen_min_rest": min(bullpen_rest_by_model[home_manager.name].values(), default=100),
+                "away_bullpen_min_rest": min(bullpen_rest_by_model[away_manager.name].values(), default=100),
+            }
+        )
+        _write_league_progress(
+            progress_path,
+            model_names=model_names,
+            games_per_matchup=games_per_matchup,
+            league_kind=league_kind,
+            started_at=started_at,
+            status="running",
+            standings=standings,
+            games=games,
+            total_games=total_games,
+            current_game=None,
+        )
+    standings_table = _standings_table(standings)
+    _write_league_progress(
+        progress_path,
+        model_names=model_names,
+        games_per_matchup=games_per_matchup,
+        league_kind=league_kind,
+        started_at=started_at,
+        status="complete",
+        standings=standings,
+        games=games,
+        total_games=total_games,
+        current_game=None,
+    )
+    summary = {
+        "kind": league_kind,
+        "league_kind": league_kind,
+        "models": model_names,
+        "games_per_matchup": games_per_matchup,
+        "league_games": league_games,
+        "schedule_mode": schedule_mode,
         "game_count": len(games),
         "average_decisions_per_game": mean(game["decision_count"] for game in games) if games else 0.0,
         "standings": standings_table,
         "head_to_head": _build_head_to_head(model_names, games),
         "games": games,
     }
-    filename = f"league-{'-'.join(model.replace('/', '-') for model in model_names)}.json"
+    filename = _league_result_filename(model_names) if league_kind == "league" else f"{league_kind.replace('_', '-')}-{'-'.join(model.replace('/', '-') for model in model_names)}.json"
     write_json(output_dir / filename, summary)
     if write_latest and output_dir != RESULTS_DIR:
         write_json(RESULTS_DIR / filename, summary)

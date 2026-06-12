@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from random import Random
 
 from baseball_bench.core import ActionType, BenchOption, BullpenOption, DecisionOption, GameState, ManagerDecision, RunnerState, make_action_id
@@ -17,6 +17,8 @@ class HitterProfile:
     doubles: int
     triples: int
     home_runs: int
+    bats: str = "R"
+    position: str = "DH"
 
     @property
     def rates(self) -> dict[str, float]:
@@ -40,6 +42,34 @@ class PitcherProfile:
     hits_allowed: int
     home_runs_allowed: int
     role: str
+    throws: str = "R"
+
+    @property
+    def rates(self) -> dict[str, float]:
+        batters_faced_estimate = max(self.innings_pitched * 4.25, 1.0)
+        return {
+            "walk": self.walks / batters_faced_estimate,
+            "strikeout": self.strikeouts / batters_faced_estimate,
+            "hit": self.hits_allowed / batters_faced_estimate,
+            "home_run": self.home_runs_allowed / batters_faced_estimate,
+        }
+
+    @property
+    def pitch_profile(self) -> dict[str, float]:
+        rates = self.rates
+        return {
+            "power": _clamp(rates["strikeout"] / 0.23, 0.72, 1.38),
+            "command": _clamp(0.085 / max(rates["walk"], 0.001), 0.72, 1.35),
+            "mistake": _clamp(rates["home_run"] / 0.032, 0.65, 1.45),
+        }
+
+    @property
+    def contact_profile(self) -> dict[str, float]:
+        rates = self.rates
+        return {
+            "contact_quality": _clamp(rates["hit"] / 0.24, 0.72, 1.28),
+            "traffic": _clamp((rates["hit"] + rates["walk"]) / 0.39, 0.78, 1.25),
+        }
 
 
 @dataclass
@@ -48,6 +78,8 @@ class TeamRoster:
     bench: list[HitterProfile]
     starter: PitcherProfile
     bullpen: list[PitcherProfile]
+    park_factor: float = 1.0
+    bullpen_roles: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -57,6 +89,8 @@ class GameResult:
     home_score: int
     away_score: int
     decision_log: list[dict[str, object]]
+    home_bullpen_rest: dict[str, int] = field(default_factory=dict)
+    away_bullpen_rest: dict[str, int] = field(default_factory=dict)
 
 
 def _apply_offensive_decision(
@@ -94,10 +128,18 @@ def _apply_offensive_decision(
     return batter, notes
 
 
-def _advance_runners(state: GameState, outcome: str) -> int:
+def _clamp(value: float, low: float, high: float) -> float:
+    return max(low, min(high, value))
+
+
+def _advance_runners(state: GameState, outcome: str, rng: Random | None = None) -> int:
+    rng = rng or Random(0)
     runs = 0
-    if outcome in {"out", "strikeout"}:
+    if outcome in {"out", "strikeout", "groundout", "flyout", "lineout", "popout"}:
         state.outs += 1
+        if outcome == "flyout" and state.outs <= 2 and state.runners.third and rng.random() < 0.36:
+            runs += 1
+            state.runners.third = False
         return runs
     if outcome == "walk":
         if state.runners.first and state.runners.second and state.runners.third:
@@ -135,23 +177,184 @@ def _advance_runners(state: GameState, outcome: str) -> int:
     raise ValueError(f"Unknown outcome {outcome}")
 
 
-def _plate_appearance_outcome(batter: HitterProfile, pitcher: PitcherProfile, rng: Random) -> str:
-    rates = dict(batter.rates)
-    walk_adjust = max(0.85, min(1.15, pitcher.walks / max(pitcher.innings_pitched * 4.0, 1.0)))
-    strikeout_adjust = max(0.85, min(1.20, pitcher.strikeouts / max(pitcher.innings_pitched * 3.0, 1.0)))
-    hr_adjust = max(0.85, min(1.15, pitcher.home_runs_allowed / max(pitcher.innings_pitched / 9.0, 1.0)))
-    rates["walk"] *= walk_adjust
-    rates["strikeout"] *= strikeout_adjust
-    rates["home_run"] *= hr_adjust
-    total_positive = sum(rates.values())
-    rates["out"] = max(0.20, 1.0 - total_positive)
-    threshold = rng.random()
+def _platoon_factor(batter: HitterProfile, pitcher: PitcherProfile) -> float:
+    if batter.bats == "S":
+        return 1.04
+    if batter.bats != pitcher.throws:
+        return 1.06
+    return 0.96
+
+
+def _pitcher_contact_factor(pitcher: PitcherProfile) -> float:
+    pitch_profile = pitcher.pitch_profile
+    contact_profile = pitcher.contact_profile
+    return _clamp(
+        (contact_profile["contact_quality"] * contact_profile["traffic"]) / pitch_profile["power"],
+        0.75,
+        1.28,
+    )
+
+
+def _fatigue_factor(fatigue: int, pitcher: PitcherProfile, times_through_order: int) -> float:
+    starter_limit = 24 if pitcher.role == "SP" else 8
+    fatigue_pressure = max(0, fatigue - starter_limit) * (0.012 if pitcher.role == "SP" else 0.025)
+    tto_pressure = max(0, times_through_order - 2) * 0.055
+    return _clamp(1.0 + fatigue_pressure + tto_pressure, 0.92, 1.38)
+
+
+def _batted_ball_outcome(
+    rates: dict[str, float],
+    *,
+    batter: HitterProfile,
+    pitcher: PitcherProfile,
+    park_factor: float,
+    rng: Random,
+) -> str:
+    power_share = _clamp((batter.doubles + batter.triples + batter.home_runs) / max(batter.pa, 1) / 0.105, 0.65, 1.45)
+    pitcher_contact = _pitcher_contact_factor(pitcher)
+    line_drive = _clamp(0.21 * pitcher_contact, 0.15, 0.30)
+    fly_ball = _clamp(0.34 * power_share * park_factor, 0.24, 0.47)
+    ground_ball = _clamp(0.39 / max(power_share, 0.75), 0.28, 0.50)
+    pop_up = max(0.04, 1.0 - line_drive - fly_ball - ground_ball)
+    batted_ball = _weighted_choice(
+        {
+            "line_drive": line_drive,
+            "fly_ball": fly_ball,
+            "ground_ball": ground_ball,
+            "pop_up": pop_up,
+        },
+        rng,
+    )
+    hit_rate = rates["single"] + rates["double"] + rates["triple"]
+    extra_base_share = (rates["double"] + rates["triple"]) / max(hit_rate, 0.001)
+    if batted_ball == "line_drive":
+        if rng.random() < _clamp(0.62 * pitcher_contact, 0.42, 0.78):
+            return "double" if rng.random() < extra_base_share else "single"
+        return "lineout"
+    if batted_ball == "fly_ball":
+        if rng.random() < _clamp(0.18 * power_share * park_factor, 0.08, 0.33):
+            return "double"
+        return "flyout"
+    if batted_ball == "ground_ball":
+        if rng.random() < _clamp(0.23 * pitcher_contact, 0.12, 0.35):
+            return "single"
+        return "groundout"
+    return "popout"
+
+
+def _weighted_choice(weights: dict[str, float], rng: Random) -> str:
+    total = sum(max(weight, 0.0) for weight in weights.values())
+    if total <= 0:
+        return next(iter(weights))
+    threshold = rng.random() * total
     cumulative = 0.0
-    for outcome in ("walk", "strikeout", "single", "double", "triple", "home_run", "out"):
-        cumulative += rates.get(outcome, 0.0)
+    for outcome, weight in weights.items():
+        cumulative += max(weight, 0.0)
         if threshold <= cumulative:
             return outcome
-    return "out"
+    return next(reversed(weights))
+
+
+def _hitter_matchup_rating(hitter: HitterProfile, pitcher: PitcherProfile) -> float:
+    rates = hitter.rates
+    base = (
+        rates["walk"]
+        + rates["single"]
+        + (1.6 * rates["double"])
+        + (2.1 * rates["triple"])
+        + (2.8 * rates["home_run"])
+        - (0.25 * rates["strikeout"])
+    )
+    return base * _platoon_factor(hitter, pitcher)
+
+
+def _positions_compatible(candidate: HitterProfile, incumbent: HitterProfile) -> bool:
+    if candidate.position in {"UT", "DH"} or incumbent.position == "DH":
+        return True
+    if candidate.position == incumbent.position:
+        return True
+    outfield = {"LF", "CF", "RF", "OF"}
+    return candidate.position in outfield and incumbent.position in outfield
+
+
+def _platoon_lineup(roster: TeamRoster, opposing_starter: PitcherProfile) -> tuple[list[HitterProfile], list[HitterProfile]]:
+    lineup = list(roster.lineup)
+    bench = list(roster.bench)
+    swaps = 0
+    for candidate in list(bench):
+        if swaps >= 2:
+            break
+        if _platoon_factor(candidate, opposing_starter) <= 1.0:
+            continue
+        candidate_score = _hitter_matchup_rating(candidate, opposing_starter)
+        replace_index = min(
+            range(len(lineup)),
+            key=lambda index: _hitter_matchup_rating(lineup[index], opposing_starter)
+            if _positions_compatible(candidate, lineup[index])
+            else float("inf"),
+        )
+        incumbent = lineup[replace_index]
+        if not _positions_compatible(candidate, incumbent):
+            continue
+        if candidate_score <= _hitter_matchup_rating(incumbent, opposing_starter) + 0.015:
+            continue
+        lineup[replace_index] = candidate
+        bench.remove(candidate)
+        bench.append(incumbent)
+        swaps += 1
+    return lineup, bench
+
+
+def _plate_appearance_outcome(
+    batter: HitterProfile,
+    pitcher: PitcherProfile,
+    rng: Random,
+    *,
+    fatigue: int = 0,
+    times_through_order: int = 1,
+    park_factor: float = 1.0,
+) -> str:
+    batter_rates = dict(batter.rates)
+    pitcher_rates = pitcher.rates
+    pitch_profile = pitcher.pitch_profile
+    platoon = _platoon_factor(batter, pitcher)
+    fatigue_multiplier = _fatigue_factor(fatigue, pitcher, times_through_order)
+    contact_factor = _pitcher_contact_factor(pitcher)
+
+    rates = {
+        "walk": batter_rates["walk"] * _clamp(pitcher_rates["walk"] / 0.085, 0.72, 1.35) / pitch_profile["command"],
+        "strikeout": batter_rates["strikeout"] * pitch_profile["power"],
+        "single": batter_rates["single"] * contact_factor * platoon * fatigue_multiplier,
+        "double": batter_rates["double"] * platoon * fatigue_multiplier * _clamp(park_factor, 0.92, 1.1),
+        "triple": batter_rates["triple"] * platoon * _clamp(park_factor, 0.9, 1.18),
+        "home_run": batter_rates["home_run"]
+        * pitch_profile["mistake"]
+        * platoon
+        * fatigue_multiplier
+        * _clamp(park_factor, 0.82, 1.22),
+    }
+    rates["walk"] = _clamp(rates["walk"], 0.035, 0.18)
+    rates["strikeout"] = _clamp(rates["strikeout"], 0.08, 0.38)
+    rates["home_run"] = _clamp(rates["home_run"], 0.005, 0.095)
+
+    direct_outcome = _weighted_choice(
+        {
+            "walk": rates["walk"],
+            "strikeout": rates["strikeout"],
+            "home_run": rates["home_run"],
+            "ball_in_play": max(0.34, 1.0 - rates["walk"] - rates["strikeout"] - rates["home_run"]),
+        },
+        rng,
+    )
+    if direct_outcome != "ball_in_play":
+        return direct_outcome
+    return _batted_ball_outcome(
+        rates,
+        batter=batter,
+        pitcher=pitcher,
+        park_factor=park_factor,
+        rng=rng,
+    )
 
 
 def offensive_options(state: GameState, bench: list[HitterProfile]) -> list[DecisionOption]:
@@ -189,22 +392,48 @@ def pitching_options(bullpen: list[PitcherProfile], current_pitcher: PitcherProf
     return options
 
 
+def _bullpen_candidates(
+    bullpen: list[PitcherProfile],
+    roles: dict[str, str],
+    rest: dict[str, int],
+    *,
+    leverage_index: float,
+) -> list[PitcherProfile]:
+    role_priority = (
+        {"closer": 0, "setup": 1, "middle": 2, "long": 3}
+        if leverage_index >= 1.5
+        else {"long": 0, "middle": 1, "setup": 2, "closer": 3}
+    )
+    return sorted(
+        bullpen,
+        key=lambda arm: (
+            rest.get(arm.player_id, 100) < 25,
+            role_priority.get(roles.get(arm.player_id, "middle"), 2),
+            -rest.get(arm.player_id, 100),
+        ),
+    )
+
+
 def simulate_game(
     home_manager,
     away_manager,
     home_roster: TeamRoster,
     away_roster: TeamRoster,
     seed: int,
+    home_bullpen_rest: dict[str, int] | None = None,
+    away_bullpen_rest: dict[str, int] | None = None,
 ) -> GameResult:
     rng = Random(seed)
     home_score = 0
     away_score = 0
     home_pitcher = replace(home_roster.starter)
     away_pitcher = replace(away_roster.starter)
-    home_bench = list(home_roster.bench)
-    away_bench = list(away_roster.bench)
+    home_lineup, home_bench = _platoon_lineup(home_roster, away_pitcher)
+    away_lineup, away_bench = _platoon_lineup(away_roster, home_pitcher)
     home_bullpen = list(home_roster.bullpen)
     away_bullpen = list(away_roster.bullpen)
+    home_bullpen_rest = dict(home_bullpen_rest or {arm.player_id: 100 for arm in home_bullpen})
+    away_bullpen_rest = dict(away_bullpen_rest or {arm.player_id: 100 for arm in away_bullpen})
     decision_log: list[dict[str, object]] = []
     home_index = 0
     away_index = 0
@@ -217,7 +446,7 @@ def simulate_game(
             runners = RunnerState()
             outs = 0
             batting_home = half == "bottom"
-            batting_lineup = home_roster.lineup if batting_home else away_roster.lineup
+            batting_lineup = home_lineup if batting_home else away_lineup
             batting_bench = home_bench if batting_home else away_bench
             manager = home_manager if batting_home else away_manager
             fielding_manager = away_manager if batting_home else home_manager
@@ -225,8 +454,18 @@ def simulate_game(
             fielding_team_name = away_manager.name if batting_home else home_manager.name
             current_pitcher = away_pitcher if batting_home else home_pitcher
             bullpen = away_bullpen if batting_home else home_bullpen
+            bullpen_rest = away_bullpen_rest if batting_home else home_bullpen_rest
+            bullpen_roles = away_roster.bullpen_roles if batting_home else home_roster.bullpen_roles
+            park_factor = home_roster.park_factor
 
             if inning >= 6 and ((batting_home and away_fatigue >= 18) or ((not batting_home) and home_fatigue >= 18)):
+                leverage_index = 1.5 if abs(home_score - away_score) <= 2 and inning >= 7 else 1.0
+                bullpen_menu = _bullpen_candidates(
+                    bullpen,
+                    bullpen_roles,
+                    bullpen_rest,
+                    leverage_index=leverage_index,
+                )
                 state = GameState(
                     inning=inning,
                     half=half,
@@ -234,22 +473,34 @@ def simulate_game(
                     runners=runners,
                     home_team=home_manager.name,
                     away_team=away_manager.name,
-                        batting_team=batting_team_name,
-                        fielding_team=fielding_team_name,
-                        home_score=home_score,
-                        away_score=away_score,
-                        batter_name=batting_lineup[(home_index if batting_home else away_index) % len(batting_lineup)].name,
-                        pitcher_name=current_pitcher.name,
-                        leverage_index=1.5 if abs(home_score - away_score) <= 2 and inning >= 7 else 1.0,
-                        bullpen=[BullpenOption(player_id=arm.player_id, name=arm.name, throws="R") for arm in bullpen[:2]],
-                    )
-                options = pitching_options(bullpen, current_pitcher)
+                    batting_team=batting_team_name,
+                    fielding_team=fielding_team_name,
+                    home_score=home_score,
+                    away_score=away_score,
+                    batter_name=batting_lineup[(home_index if batting_home else away_index) % len(batting_lineup)].name,
+                    pitcher_name=current_pitcher.name,
+                    leverage_index=leverage_index,
+                    bullpen=[
+                        BullpenOption(
+                            player_id=arm.player_id,
+                            name=arm.name,
+                            throws=arm.throws,
+                            stamina=bullpen_rest.get(arm.player_id, 100),
+                        )
+                        for arm in bullpen_menu[:2]
+                    ],
+                )
+                options = pitching_options(bullpen_menu, current_pitcher)
                 decision = fielding_manager.decide(state, options)
                 decision_log.append({"phase": "pitching", "manager": fielding_manager.name, "decision": decision.action_id, "inning": inning, "half": half})
                 if decision.action_id.startswith("go_to_bullpen:"):
                     arm_id = decision.action_id.split(":", 1)[1]
                     replacement_pitcher = next((arm for arm in bullpen if arm.player_id == arm_id), None)
                     if replacement_pitcher:
+                        bullpen_rest[replacement_pitcher.player_id] = max(
+                            0,
+                            bullpen_rest.get(replacement_pitcher.player_id, 100) - 35,
+                        )
                         if batting_home:
                             away_pitcher = replace(replacement_pitcher)
                             away_fatigue = 0
@@ -276,7 +527,7 @@ def simulate_game(
                     batter_name=batter.name,
                     pitcher_name=current_pitcher.name,
                     leverage_index=1.8 if inning >= 7 and abs(home_score - away_score) <= 1 else 1.0,
-                    bench=[BenchOption(player_id=player.player_id, name=player.name, bats="S") for player in batting_bench[:1]],
+                    bench=[BenchOption(player_id=player.player_id, name=player.name, bats=player.bats) for player in batting_bench[:1]],
                 )
                 notes: list[str] = []
                 if inning >= 7 and (runners.first or batting_bench):
@@ -288,8 +539,18 @@ def simulate_game(
                     runners = state.runners
                     if outs >= 3:
                         break
-                outcome = _plate_appearance_outcome(batter, current_pitcher, rng)
-                runs = _advance_runners(state, outcome)
+                pitcher_fatigue = away_fatigue if batting_home else home_fatigue
+                lineup_index = home_index if batting_home else away_index
+                times_through_order = 1 + (lineup_index // max(len(batting_lineup), 1))
+                outcome = _plate_appearance_outcome(
+                    batter,
+                    current_pitcher,
+                    rng,
+                    fatigue=pitcher_fatigue,
+                    times_through_order=times_through_order,
+                    park_factor=park_factor,
+                )
+                runs = _advance_runners(state, outcome, rng)
                 outs = state.outs
                 runners = state.runners
                 if batting_home:
@@ -314,4 +575,6 @@ def simulate_game(
         home_score=home_score,
         away_score=away_score,
         decision_log=decision_log,
+        home_bullpen_rest=home_bullpen_rest,
+        away_bullpen_rest=away_bullpen_rest,
     )

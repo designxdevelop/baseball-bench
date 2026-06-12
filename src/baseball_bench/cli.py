@@ -29,7 +29,8 @@ from baseball_bench.tracks.decisions import (
     run_wp_baseline,
     write_decisions_summary,
 )
-from baseball_bench.tracks.league import run_league
+from baseball_bench.tracks.gm import run_gm_roster, run_gm_rosters, team_roster_from_build
+from baseball_bench.tracks.league import build_controlled_roster, run_league, run_manager_plans
 from baseball_bench.utils import write_json
 
 
@@ -92,6 +93,7 @@ def _finalize_run_manifest(
 ) -> None:
     manifest["status"] = "complete"
     manifest["completed_at"] = datetime.now().astimezone().isoformat(timespec="seconds")
+    manifest.pop("active_track", None)
     manifest["tracks_completed"] = tracks_completed
     manifest["artifacts"] = {
         "leaderboard_json": "leaderboard.json",
@@ -101,6 +103,24 @@ def _finalize_run_manifest(
         ),
     }
     write_json(run_dir / "manifest.json", manifest)
+
+
+def _update_run_manifest(
+    run_dir: Path,
+    manifest: dict[str, object],
+    *,
+    active_track: str,
+    tracks_completed: list[str],
+) -> None:
+    manifest["status"] = "running"
+    manifest["active_track"] = active_track
+    manifest["tracks_completed"] = tracks_completed
+    manifest["updated_at"] = datetime.now().astimezone().isoformat(timespec="seconds")
+    write_json(run_dir / "manifest.json", manifest)
+
+
+def _league_games_arg(args: Any) -> int | None:
+    return None if getattr(args, "full_league", False) else getattr(args, "league_games", None)
 
 
 def _build_run_snapshot(run_dir: Path) -> None:
@@ -166,21 +186,38 @@ def run_bench(args) -> int:
             seed=args.seed,
             baseline=True,
         )
+        _update_run_manifest(run_dir, manifest, active_track="analysis", tracks_completed=[])
         analysis_summary = run_sql_baseline()
         write_analysis_summary(analysis_summary, output_dir=run_dir)
+        _update_run_manifest(run_dir, manifest, active_track="decisions", tracks_completed=["analysis"])
         decisions_summary = run_wp_baseline()
         write_decisions_summary(decisions_summary, output_dir=run_dir)
+        _update_run_manifest(run_dir, manifest, active_track="gm", tracks_completed=["analysis", "decisions"])
+        gm_models = ["rulebook", "aggressive", "conservative"]
+        run_gm_rosters(gm_models, output_dir=run_dir, allow_model_call=False)
+        _update_run_manifest(run_dir, manifest, active_track="manager_plan", tracks_completed=["analysis", "decisions", "gm"])
+        controlled_roster = build_controlled_roster()
+        planned_rosters = run_manager_plans(
+            gm_models,
+            controlled_roster,
+            output_dir=run_dir,
+            allow_model_call=False,
+        )
+        _update_run_manifest(run_dir, manifest, active_track="controlled_league", tracks_completed=["analysis", "decisions", "gm", "manager_plan"])
         run_league(
-            ["rulebook", "aggressive", "conservative"],
+            gm_models,
             games_per_matchup=args.games,
             seed=args.seed,
+            league_games=_league_games_arg(args),
+            league_kind="controlled_league",
+            rosters_by_model=planned_rosters,
             output_dir=run_dir,
         )
         _build_run_snapshot(run_dir)
         _finalize_run_manifest(
             run_dir,
             manifest,
-            tracks_completed=["analysis", "decisions", "league"],
+            tracks_completed=["analysis", "decisions", "gm", "controlled_league"],
         )
         build_site()
         return 0
@@ -194,6 +231,7 @@ def run_bench(args) -> int:
         seed=args.seed,
         baseline=False,
     )
+    _update_run_manifest(run_dir, manifest, active_track="analysis", tracks_completed=[])
 
     analysis_logs = inspect_eval(
         analysis_task(),
@@ -201,24 +239,39 @@ def run_bench(args) -> int:
         log_dir=str(LOGS_DIR / "analysis"),
         log_format="json",
     )
+    for log in analysis_logs:
+        _summarize_eval_log(log, "analysis", output_dir=run_dir)
+    _update_run_manifest(run_dir, manifest, active_track="decisions", tracks_completed=["analysis"])
     decisions_logs = inspect_eval(
         decisions_task(),
         model=model_names,
         log_dir=str(LOGS_DIR / "decisions"),
         log_format="json",
     )
-    for log in analysis_logs:
-        _summarize_eval_log(log, "analysis", output_dir=run_dir)
     for log in decisions_logs:
         _summarize_eval_log(log, "decisions", output_dir=run_dir)
 
+    _update_run_manifest(run_dir, manifest, active_track="gm", tracks_completed=["analysis", "decisions"])
+    run_gm_rosters(model_names, output_dir=run_dir)
     league_models = list(dict.fromkeys(model_names + ["rulebook"]))
-    run_league(league_models, games_per_matchup=args.games, seed=args.seed, output_dir=run_dir)
+    _update_run_manifest(run_dir, manifest, active_track="manager_plan", tracks_completed=["analysis", "decisions", "gm"])
+    controlled_roster = build_controlled_roster()
+    planned_rosters = run_manager_plans(league_models, controlled_roster, output_dir=run_dir)
+    _update_run_manifest(run_dir, manifest, active_track="controlled_league", tracks_completed=["analysis", "decisions", "gm", "manager_plan"])
+    run_league(
+        league_models,
+        games_per_matchup=args.games,
+        seed=args.seed,
+        league_games=_league_games_arg(args),
+        league_kind="controlled_league",
+        rosters_by_model=planned_rosters,
+        output_dir=run_dir,
+    )
     _build_run_snapshot(run_dir)
     _finalize_run_manifest(
         run_dir,
         manifest,
-        tracks_completed=["analysis", "decisions", "league"],
+        tracks_completed=["analysis", "decisions", "gm", "controlled_league"],
     )
     build_site()
     return 0
@@ -229,6 +282,7 @@ def run_cost_estimate(args: Any) -> int:
     summary = estimate_costs(
         model_names,
         games_per_matchup=args.games,
+        league_games=getattr(args, "league_games", None),
         allow_network=not getattr(args, "offline", False),
     )
     write_cost_estimate(summary)
@@ -258,12 +312,29 @@ def main(argv: list[str] | None = None) -> int:
     league_parser.add_argument("--model", action="append")
     league_parser.add_argument("--models")
     league_parser.add_argument("--games", type=int, default=6)
+    league_parser.add_argument("--league-games", type=int, default=12)
+    league_parser.add_argument("--full-league", action="store_true")
     league_parser.add_argument("--seed", type=int, default=7)
+
+    gm_parser = subparsers.add_parser("run-gm")
+    gm_parser.add_argument("--model", action="append")
+    gm_parser.add_argument("--models")
+    gm_parser.add_argument("--offline", action="store_true")
+
+    open_league_parser = subparsers.add_parser("run-open-league")
+    open_league_parser.add_argument("--model", action="append")
+    open_league_parser.add_argument("--models")
+    open_league_parser.add_argument("--games", type=int, default=6)
+    open_league_parser.add_argument("--league-games", type=int, default=12)
+    open_league_parser.add_argument("--full-league", action="store_true")
+    open_league_parser.add_argument("--seed", type=int, default=7)
+    open_league_parser.add_argument("--offline-gm", action="store_true")
 
     estimate_parser = subparsers.add_parser("estimate-cost")
     estimate_parser.add_argument("--model", action="append")
     estimate_parser.add_argument("--models")
     estimate_parser.add_argument("--games", type=int, default=6)
+    estimate_parser.add_argument("--league-games", type=int, default=12)
     estimate_parser.add_argument("--offline", action="store_true")
 
     bench_parser = subparsers.add_parser("run-bench")
@@ -271,6 +342,8 @@ def main(argv: list[str] | None = None) -> int:
     bench_parser.add_argument("--model", action="append")
     bench_parser.add_argument("--models")
     bench_parser.add_argument("--games", type=int, default=6)
+    bench_parser.add_argument("--league-games", type=int, default=12)
+    bench_parser.add_argument("--full-league", action="store_true")
     bench_parser.add_argument("--seed", type=int, default=7)
 
     args = parser.parse_args(argv)
@@ -291,7 +364,36 @@ def main(argv: list[str] | None = None) -> int:
         if len(model_names) < 2:
             raise ValueError("League needs at least two resolved models.")
         require_openrouter_api_key(model_names)
-        run_league(model_names, games_per_matchup=args.games, seed=args.seed)
+        run_league(
+            model_names,
+            games_per_matchup=args.games,
+            seed=args.seed,
+            league_games=_league_games_arg(args),
+            league_kind="controlled_league",
+        )
+        return 0
+    if args.command == "run-gm":
+        model_names = _resolve_eval_models(args)
+        require_openrouter_api_key(model_names)
+        run_gm_rosters(model_names, allow_model_call=not args.offline)
+        return 0
+    if args.command == "run-open-league":
+        model_names = _resolve_eval_models(args)
+        require_openrouter_api_key(model_names)
+        builds = run_gm_rosters(model_names, allow_model_call=not args.offline_gm)
+        rosters_by_model = {
+            str(build["model"]): team_roster_from_build(build)
+            for build in builds
+            if build.get("roster", {}).get("validation", {}).get("valid")
+        }
+        run_league(
+            model_names,
+            games_per_matchup=args.games,
+            seed=args.seed,
+            league_games=_league_games_arg(args),
+            league_kind="open_league",
+            rosters_by_model=rosters_by_model,
+        )
         return 0
     if args.command == "build-site":
         build_site()

@@ -38,6 +38,7 @@ def test_estimate_costs_uses_fallback_prices(monkeypatch):
     summary = estimate_costs(
         ["openrouter/openai/gpt-5.5", "openrouter/qwen/qwen3.6-35b-a3b"],
         games_per_matchup=2,
+        league_games=12,
         assumptions=TrackAssumptions(
             analysis_input_tokens=100,
             analysis_output_tokens=10,
@@ -52,6 +53,7 @@ def test_estimate_costs_uses_fallback_prices(monkeypatch):
     assert summary["pricing_source"] == "test_fallback"
     assert summary["analysis_samples"] == 10
     assert summary["decision_samples"] == 8
+    assert summary["league_games"] == 12
+    assert summary["estimated_total_league_games"] == 12
     assert len(summary["per_model"]) == 2
     assert summary["total_cost_usd"] > 0
-

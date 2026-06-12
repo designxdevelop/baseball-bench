@@ -68,7 +68,7 @@ def test_build_site_renders_english_latest_view_and_history(tmp_path, monkeypatc
         "Answered 3 of 10 baseball research questions correctly."
     )
     assert leaderboard["models"][0]["tracks"]["league"]["summary"] == (
-        "League play has not run yet for this model."
+        "Controlled manager league play has not run yet for this model."
     )
     assert leaderboard["models"][0]["overall_read"] == "Strong start"
     assert leaderboard["run_history"][0]["label"] == "OpenRouter benchmark"

@@ -29,14 +29,16 @@ def test_resolve_eval_models_defaults_to_curated_openrouter_pack():
         "openrouter/deepseek/deepseek-v4-pro",
         "openrouter/nvidia/nemotron-3-ultra-550b-a55b",
         "openrouter/qwen/qwen3.6-35b-a3b",
+        "openrouter/google/gemini-3.1-pro-preview",
     ]
 
 
 def test_run_bench_batches_models_into_single_inspect_call(monkeypatch):
     inspect_calls: list[tuple[str, list[str]]] = []
     summarized: list[tuple[str, str, Path]] = []
-    league_calls: list[list[str]] = []
+    league_calls: list[tuple[list[str], int | None, str]] = []
     snapshots: list[Path] = []
+    manifest_updates: list[tuple[str, list[str]]] = []
     finalized: list[tuple[Path, list[str]]] = []
 
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
@@ -51,6 +53,13 @@ def test_run_bench_batches_models_into_single_inspect_call(monkeypatch):
         lambda **kwargs: (Path("/tmp/test-run"), {"label": "test"}),
     )
     monkeypatch.setattr(cli, "_build_run_snapshot", lambda run_dir: snapshots.append(run_dir))
+    monkeypatch.setattr(
+        cli,
+        "_update_run_manifest",
+        lambda run_dir, manifest, active_track, tracks_completed: manifest_updates.append(
+            (active_track, tracks_completed)
+        ),
+    )
     monkeypatch.setattr(
         cli,
         "_finalize_run_manifest",
@@ -69,10 +78,21 @@ def test_run_bench_batches_models_into_single_inspect_call(monkeypatch):
         "_summarize_eval_log",
         lambda log, kind, output_dir: summarized.append((kind, log, output_dir)),
     )
+    monkeypatch.setattr(cli, "run_gm_rosters", lambda models, output_dir, allow_model_call=True: [])
+    monkeypatch.setattr(cli, "build_controlled_roster", lambda: "controlled-roster")
+    monkeypatch.setattr(
+        cli,
+        "run_manager_plans",
+        lambda models, roster, output_dir, allow_model_call=True: {
+            model: f"planned-{model}" for model in models
+        },
+    )
     monkeypatch.setattr(
         cli,
         "run_league",
-        lambda models, games_per_matchup, seed, output_dir: league_calls.append(list(models)),
+        lambda models, games_per_matchup, seed, league_games, league_kind, rosters_by_model, output_dir: league_calls.append(
+            (list(models), league_games, league_kind)
+        ),
     )
 
     args = Namespace(
@@ -80,6 +100,8 @@ def test_run_bench_batches_models_into_single_inspect_call(monkeypatch):
         model=["openai/gpt-5"],
         models="anthropic/claude-4.1",
         games=2,
+        league_games=12,
+        full_league=False,
         seed=7,
     )
 
@@ -108,20 +130,31 @@ def test_run_bench_batches_models_into_single_inspect_call(monkeypatch):
         ("decisions", "decisions-log-1", Path("/tmp/test-run")),
         ("decisions", "decisions-log-2", Path("/tmp/test-run")),
     ]
-    assert league_calls == [[
-        "openrouter/openai/gpt-5",
-        "openrouter/anthropic/claude-4.1",
-        "rulebook",
-    ]]
+    assert league_calls == [(
+        [
+            "openrouter/openai/gpt-5",
+            "openrouter/anthropic/claude-4.1",
+            "rulebook",
+        ],
+        12,
+        "controlled_league",
+    )]
+    assert manifest_updates == [
+        ("analysis", []),
+        ("decisions", ["analysis"]),
+        ("gm", ["analysis", "decisions"]),
+        ("manager_plan", ["analysis", "decisions", "gm"]),
+        ("controlled_league", ["analysis", "decisions", "gm", "manager_plan"]),
+    ]
     assert snapshots == [Path("/tmp/test-run")]
-    assert finalized == [(Path("/tmp/test-run"), ["analysis", "decisions", "league"])]
+    assert finalized == [(Path("/tmp/test-run"), ["analysis", "decisions", "gm", "controlled_league"])]
 
 
 def test_run_cost_estimate_uses_estimator_and_prints_summary(monkeypatch, capsys):
     monkeypatch.setattr(
         cli,
         "estimate_costs",
-        lambda model_names, games_per_matchup, allow_network: {
+        lambda model_names, games_per_matchup, league_games, allow_network: {
             "pricing_source": "test_source",
             "total_cost_usd": 12.34,
             "per_model": [
@@ -139,7 +172,7 @@ def test_run_cost_estimate_uses_estimator_and_prints_summary(monkeypatch, capsys
     monkeypatch.setattr(cli, "write_cost_estimate", lambda summary: written.append(summary))
 
     result = cli.run_cost_estimate(
-        Namespace(model=["openai/gpt-5.5"], models=None, games=3, offline=True)
+        Namespace(model=["openai/gpt-5.5"], models=None, games=3, league_games=12, offline=True)
     )
 
     assert result == 0
