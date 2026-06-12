@@ -93,9 +93,19 @@ def run_sql_baseline(question_set: str = "v1", model_name: str = "sql-baseline")
     return summary
 
 
+def write_analysis_summary(
+    summary: dict[str, object],
+    output_dir: Path = RESULTS_DIR,
+    write_latest: bool = True,
+) -> None:
+    filename = f"analysis-{summary['model'].replace('/', '-')}.json"
+    write_json(output_dir / filename, summary)
+    if write_latest and output_dir != RESULTS_DIR:
+        write_json(RESULTS_DIR / filename, summary)
+
+
 def execute_baseline_sql(question: AnalysisQuestion, database_path: Path) -> str:
     from baseball_bench.data import execute_read_only_query
 
     result = execute_read_only_query(question.sql, database_path=database_path, row_limit=1)
     return str(result["rows"][0][0])
-

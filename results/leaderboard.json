@@ -1,230 +1,473 @@
 {
-  "league_runs": [
+  "internal_models": [
     {
-      "average_decisions_per_game": 32.5,
-      "game_count": 12,
-      "games": [
-        {
-          "away": "aggressive",
-          "away_score": 11,
-          "decision_count": 45,
-          "game_number": 1,
-          "home": "rulebook",
-          "home_score": 8,
-          "winner": "aggressive"
+      "completed_tracks": 1,
+      "display_name": "wp-baseline",
+      "model": "wp-baseline",
+      "overall_read": "Strong start",
+      "overall_score": 1.0,
+      "overall_summary": "Completed 1 of 3 tracks. Best showing so far came in game moves. Overall ranking is on hold until league play finishes.",
+      "rank": 1,
+      "tracks": {
+        "analysis": {
+          "headline": "Not run yet",
+          "metrics": {},
+          "score": null,
+          "status": "missing",
+          "summary": "This model has not completed the research track yet."
         },
-        {
-          "away": "aggressive",
-          "away_score": 7,
-          "decision_count": 27,
-          "game_number": 2,
-          "home": "rulebook",
-          "home_score": 0,
-          "winner": "aggressive"
+        "decisions": {
+          "headline": "Flawless late-game choices",
+          "metrics": {
+            "mean_wp_delta": 0.0,
+            "near_optimal_count": 8,
+            "near_optimal_rate": 1.0,
+            "total": 8
+          },
+          "score": 1.0,
+          "status": "complete",
+          "summary": "Chose the best or near-best move in 8 of 8 late-game situations."
         },
-        {
-          "away": "conservative",
-          "away_score": 5,
-          "decision_count": 39,
-          "game_number": 3,
-          "home": "rulebook",
-          "home_score": 9,
-          "winner": "rulebook"
-        },
-        {
-          "away": "conservative",
-          "away_score": 7,
-          "decision_count": 30,
-          "game_number": 4,
-          "home": "rulebook",
-          "home_score": 1,
-          "winner": "conservative"
-        },
-        {
-          "away": "rulebook",
-          "away_score": 3,
-          "decision_count": 33,
-          "game_number": 5,
-          "home": "aggressive",
-          "home_score": 7,
-          "winner": "aggressive"
-        },
-        {
-          "away": "rulebook",
-          "away_score": 3,
-          "decision_count": 29,
-          "game_number": 6,
-          "home": "aggressive",
-          "home_score": 8,
-          "winner": "aggressive"
-        },
-        {
-          "away": "conservative",
-          "away_score": 1,
-          "decision_count": 29,
-          "game_number": 7,
-          "home": "aggressive",
-          "home_score": 3,
-          "winner": "aggressive"
-        },
-        {
-          "away": "conservative",
-          "away_score": 0,
-          "decision_count": 30,
-          "game_number": 8,
-          "home": "aggressive",
-          "home_score": 10,
-          "winner": "aggressive"
-        },
-        {
-          "away": "rulebook",
-          "away_score": 12,
-          "decision_count": 29,
-          "game_number": 9,
-          "home": "conservative",
-          "home_score": 5,
-          "winner": "rulebook"
-        },
-        {
-          "away": "rulebook",
-          "away_score": 1,
-          "decision_count": 39,
-          "game_number": 10,
-          "home": "conservative",
-          "home_score": 4,
-          "winner": "conservative"
-        },
-        {
-          "away": "aggressive",
-          "away_score": 2,
-          "decision_count": 23,
-          "game_number": 11,
-          "home": "conservative",
-          "home_score": 4,
-          "winner": "conservative"
-        },
-        {
-          "away": "aggressive",
-          "away_score": 4,
-          "decision_count": 37,
-          "game_number": 12,
-          "home": "conservative",
-          "home_score": 14,
-          "winner": "conservative"
+        "league": {
+          "headline": "Not run yet",
+          "metrics": {},
+          "score": null,
+          "status": "missing",
+          "summary": "League play has not run yet for this model."
         }
-      ],
-      "games_per_matchup": 2,
-      "kind": "league",
-      "models": [
-        "rulebook",
-        "aggressive",
-        "conservative"
-      ],
-      "standings": [
-        {
-          "elo": 1530.65,
-          "losses": 2,
-          "model": "aggressive",
-          "run_diff": 19,
-          "win_pct": 0.75,
-          "wins": 6
-        },
-        {
-          "elo": 1505.12,
-          "losses": 4,
-          "model": "conservative",
-          "run_diff": -2,
-          "win_pct": 0.5,
-          "wins": 4
-        },
-        {
-          "elo": 1464.24,
-          "losses": 6,
-          "model": "rulebook",
-          "run_diff": -17,
-          "win_pct": 0.25,
-          "wins": 2
-        }
-      ]
+      }
     },
     {
-      "average_decisions_per_game": 29,
-      "game_count": 2,
-      "games": [
-        {
-          "away": "aggressive",
-          "away_score": 2,
-          "decision_count": 22,
-          "game_number": 1,
-          "home": "rulebook",
-          "home_score": 4,
-          "winner": "rulebook"
+      "completed_tracks": 1,
+      "display_name": "sql-baseline",
+      "model": "sql-baseline",
+      "overall_read": "Strong start",
+      "overall_score": 1.0,
+      "overall_summary": "Completed 1 of 3 tracks. Best showing so far came in research. Overall ranking is on hold until league play finishes.",
+      "rank": 2,
+      "tracks": {
+        "analysis": {
+          "headline": "Strong baseball research",
+          "metrics": {
+            "accuracy": 1.0,
+            "correct": 10,
+            "total": 10
+          },
+          "score": 1.0,
+          "status": "complete",
+          "summary": "Answered 10 of 10 baseball research questions correctly."
         },
-        {
-          "away": "rulebook",
-          "away_score": 6,
-          "decision_count": 36,
-          "game_number": 2,
-          "home": "aggressive",
-          "home_score": 10,
-          "winner": "aggressive"
-        }
-      ],
-      "games_per_matchup": 1,
-      "kind": "league",
-      "models": [
-        "rulebook",
-        "aggressive"
-      ],
-      "standings": [
-        {
-          "elo": 1500.58,
-          "losses": 1,
-          "model": "aggressive",
-          "run_diff": 2,
-          "win_pct": 0.5,
-          "wins": 1
+        "decisions": {
+          "headline": "Not run yet",
+          "metrics": {},
+          "score": null,
+          "status": "missing",
+          "summary": "This model has not completed the late-game decision track yet."
         },
-        {
-          "elo": 1499.42,
-          "losses": 1,
-          "model": "rulebook",
-          "run_diff": -2,
-          "win_pct": 0.5,
-          "wins": 1
+        "league": {
+          "headline": "Not run yet",
+          "metrics": {},
+          "score": null,
+          "status": "missing",
+          "summary": "League play has not run yet for this model."
         }
-      ]
+      }
+    },
+    {
+      "completed_tracks": 1,
+      "display_name": "aggressive",
+      "model": "aggressive",
+      "overall_read": "Strong start",
+      "overall_score": 1.0,
+      "overall_summary": "Completed 1 of 3 tracks. Best showing so far came in league play. Overall ranking is on hold until league play finishes.",
+      "rank": 3,
+      "tracks": {
+        "analysis": {
+          "headline": "Not run yet",
+          "metrics": {},
+          "score": null,
+          "status": "missing",
+          "summary": "This model has not completed the research track yet."
+        },
+        "decisions": {
+          "headline": "Not run yet",
+          "metrics": {},
+          "score": null,
+          "status": "missing",
+          "summary": "This model has not completed the late-game decision track yet."
+        },
+        "league": {
+          "headline": "Won the sim league",
+          "metrics": {
+            "elo": 1500.58,
+            "game_count": 2,
+            "losses": 1,
+            "rank": 1,
+            "run_diff": 2,
+            "team_count": 2,
+            "win_pct": 0.5,
+            "wins": 1
+          },
+          "score": 1.0,
+          "status": "complete",
+          "summary": "Finished 1st of 2 managers and went 1-1 across 2 league games."
+        }
+      }
+    },
+    {
+      "completed_tracks": 1,
+      "display_name": "conservative",
+      "model": "conservative",
+      "overall_read": "Run in progress",
+      "overall_score": 0.5,
+      "overall_summary": "Completed 1 of 3 tracks. Best showing so far came in league play. Overall ranking is on hold until league play finishes.",
+      "rank": 4,
+      "tracks": {
+        "analysis": {
+          "headline": "Not run yet",
+          "metrics": {},
+          "score": null,
+          "status": "missing",
+          "summary": "This model has not completed the research track yet."
+        },
+        "decisions": {
+          "headline": "Not run yet",
+          "metrics": {},
+          "score": null,
+          "status": "missing",
+          "summary": "This model has not completed the late-game decision track yet."
+        },
+        "league": {
+          "headline": "Looked like a contender",
+          "metrics": {
+            "elo": 1505.12,
+            "game_count": 12,
+            "losses": 4,
+            "rank": 2,
+            "run_diff": -2,
+            "team_count": 3,
+            "win_pct": 0.5,
+            "wins": 4
+          },
+          "score": 0.5,
+          "status": "complete",
+          "summary": "Finished 2nd of 3 managers and went 4-4 across 12 league games."
+        }
+      }
+    },
+    {
+      "completed_tracks": 1,
+      "display_name": "rulebook",
+      "model": "rulebook",
+      "overall_read": "Run in progress",
+      "overall_score": 0.0,
+      "overall_summary": "Completed 1 of 3 tracks. Best showing so far came in league play. Overall ranking is on hold until league play finishes.",
+      "rank": 5,
+      "tracks": {
+        "analysis": {
+          "headline": "Not run yet",
+          "metrics": {},
+          "score": null,
+          "status": "missing",
+          "summary": "This model has not completed the research track yet."
+        },
+        "decisions": {
+          "headline": "Not run yet",
+          "metrics": {},
+          "score": null,
+          "status": "missing",
+          "summary": "This model has not completed the late-game decision track yet."
+        },
+        "league": {
+          "headline": "Looked like a contender",
+          "metrics": {
+            "elo": 1499.42,
+            "game_count": 2,
+            "losses": 1,
+            "rank": 2,
+            "run_diff": -2,
+            "team_count": 2,
+            "win_pct": 0.5,
+            "wins": 1
+          },
+          "score": 0.0,
+          "status": "complete",
+          "summary": "Finished 2nd of 2 managers and went 1-1 across 2 league games."
+        }
+      }
     }
   ],
+  "league_runs": [],
   "models": [
     {
-      "analysis_accuracy": 1.0,
-      "model": "sql-baseline",
-      "overall_score": 0.5
+      "completed_tracks": 2,
+      "display_name": "qwen/qwen3.6-35b-a3b",
+      "model": "openrouter/qwen/qwen3.6-35b-a3b",
+      "overall_read": "Strong start",
+      "overall_score": 0.9,
+      "overall_summary": "Completed 2 of 3 tracks. Best showing so far came in game moves. Overall ranking is on hold until league play finishes.",
+      "rank": null,
+      "tracks": {
+        "analysis": {
+          "headline": "Strong baseball research",
+          "metrics": {
+            "accuracy": 0.8,
+            "correct": 8,
+            "total": 10
+          },
+          "score": 0.8,
+          "status": "complete",
+          "summary": "Answered 8 of 10 baseball research questions correctly."
+        },
+        "decisions": {
+          "headline": "Flawless late-game choices",
+          "metrics": {
+            "mean_wp_delta": 0.0,
+            "near_optimal_count": 8,
+            "near_optimal_rate": 1.0,
+            "total": 8
+          },
+          "score": 1.0,
+          "status": "complete",
+          "summary": "Chose the best or near-best move in 8 of 8 late-game situations."
+        },
+        "league": {
+          "headline": "Not run yet",
+          "metrics": {},
+          "score": null,
+          "status": "missing",
+          "summary": "League play has not run yet for this model."
+        }
+      }
     },
     {
-      "decision_near_optimal_rate": 1.0,
-      "decision_wp_delta": 0.0,
-      "model": "wp-baseline",
-      "overall_score": 0.5
+      "completed_tracks": 2,
+      "display_name": "nvidia/nemotron-3-ultra-550b-a55b",
+      "model": "openrouter/nvidia/nemotron-3-ultra-550b-a55b",
+      "overall_read": "Strong start",
+      "overall_score": 0.85,
+      "overall_summary": "Completed 2 of 3 tracks. Best showing so far came in game moves. Overall ranking is on hold until league play finishes.",
+      "rank": null,
+      "tracks": {
+        "analysis": {
+          "headline": "Mostly reliable research",
+          "metrics": {
+            "accuracy": 0.7,
+            "correct": 7,
+            "total": 10
+          },
+          "score": 0.7,
+          "status": "complete",
+          "summary": "Answered 7 of 10 baseball research questions correctly."
+        },
+        "decisions": {
+          "headline": "Flawless late-game choices",
+          "metrics": {
+            "mean_wp_delta": 0.0,
+            "near_optimal_count": 8,
+            "near_optimal_rate": 1.0,
+            "total": 8
+          },
+          "score": 1.0,
+          "status": "complete",
+          "summary": "Chose the best or near-best move in 8 of 8 late-game situations."
+        },
+        "league": {
+          "headline": "Not run yet",
+          "metrics": {},
+          "score": null,
+          "status": "missing",
+          "summary": "League play has not run yet for this model."
+        }
+      }
     },
     {
-      "league_elo": 1505.12,
-      "league_win_pct": 0.5,
-      "model": "conservative",
-      "overall_score": 0.175
+      "completed_tracks": 2,
+      "display_name": "deepseek/deepseek-v4-pro",
+      "model": "openrouter/deepseek/deepseek-v4-pro",
+      "overall_read": "Strong start",
+      "overall_score": 0.65,
+      "overall_summary": "Completed 2 of 3 tracks. Best showing so far came in game moves. Overall ranking is on hold until league play finishes.",
+      "rank": null,
+      "tracks": {
+        "analysis": {
+          "headline": "Needs fact-checking",
+          "metrics": {
+            "accuracy": 0.3,
+            "correct": 3,
+            "total": 10
+          },
+          "score": 0.3,
+          "status": "complete",
+          "summary": "Answered 3 of 10 baseball research questions correctly."
+        },
+        "decisions": {
+          "headline": "Flawless late-game choices",
+          "metrics": {
+            "mean_wp_delta": 0.0,
+            "near_optimal_count": 8,
+            "near_optimal_rate": 1.0,
+            "total": 8
+          },
+          "score": 1.0,
+          "status": "complete",
+          "summary": "Chose the best or near-best move in 8 of 8 late-game situations."
+        },
+        "league": {
+          "headline": "Not run yet",
+          "metrics": {},
+          "score": null,
+          "status": "missing",
+          "summary": "League play has not run yet for this model."
+        }
+      }
     },
     {
-      "league_elo": 1500.58,
-      "league_win_pct": 0.5,
-      "model": "aggressive",
-      "overall_score": 0.168
+      "completed_tracks": 2,
+      "display_name": "openai/gpt-5.5",
+      "model": "openrouter/openai/gpt-5.5",
+      "overall_read": "Strong start",
+      "overall_score": 0.6,
+      "overall_summary": "Completed 2 of 3 tracks. Best showing so far came in game moves. Overall ranking is on hold until league play finishes.",
+      "rank": null,
+      "tracks": {
+        "analysis": {
+          "headline": "Needs fact-checking",
+          "metrics": {
+            "accuracy": 0.2,
+            "correct": 2,
+            "total": 10
+          },
+          "score": 0.2,
+          "status": "complete",
+          "summary": "Answered 2 of 10 baseball research questions correctly."
+        },
+        "decisions": {
+          "headline": "Flawless late-game choices",
+          "metrics": {
+            "mean_wp_delta": 0.0,
+            "near_optimal_count": 8,
+            "near_optimal_rate": 1.0,
+            "total": 8
+          },
+          "score": 1.0,
+          "status": "complete",
+          "summary": "Chose the best or near-best move in 8 of 8 late-game situations."
+        },
+        "league": {
+          "headline": "Not run yet",
+          "metrics": {},
+          "score": null,
+          "status": "missing",
+          "summary": "League play has not run yet for this model."
+        }
+      }
     },
     {
-      "league_elo": 1499.42,
-      "league_win_pct": 0.5,
-      "model": "rulebook",
-      "overall_score": 0.166
+      "completed_tracks": 2,
+      "display_name": "anthropic/claude-fable-5",
+      "model": "openrouter/anthropic/claude-fable-5",
+      "overall_read": "Strong start",
+      "overall_score": 0.6,
+      "overall_summary": "Completed 2 of 3 tracks. Best showing so far came in game moves. Overall ranking is on hold until league play finishes.",
+      "rank": null,
+      "tracks": {
+        "analysis": {
+          "headline": "Needs fact-checking",
+          "metrics": {
+            "accuracy": 0.2,
+            "correct": 2,
+            "total": 10
+          },
+          "score": 0.2,
+          "status": "complete",
+          "summary": "Answered 2 of 10 baseball research questions correctly."
+        },
+        "decisions": {
+          "headline": "Flawless late-game choices",
+          "metrics": {
+            "mean_wp_delta": 0.0,
+            "near_optimal_count": 8,
+            "near_optimal_rate": 1.0,
+            "total": 8
+          },
+          "score": 1.0,
+          "status": "complete",
+          "summary": "Chose the best or near-best move in 8 of 8 late-game situations."
+        },
+        "league": {
+          "headline": "Not run yet",
+          "metrics": {},
+          "score": null,
+          "status": "missing",
+          "summary": "League play has not run yet for this model."
+        }
+      }
+    },
+    {
+      "completed_tracks": 2,
+      "display_name": "anthropic/claude-opus-4.8",
+      "model": "openrouter/anthropic/claude-opus-4.8",
+      "overall_read": "Strong start",
+      "overall_score": 0.55,
+      "overall_summary": "Completed 2 of 3 tracks. Best showing so far came in game moves. Overall ranking is on hold until league play finishes.",
+      "rank": null,
+      "tracks": {
+        "analysis": {
+          "headline": "Needs fact-checking",
+          "metrics": {
+            "accuracy": 0.1,
+            "correct": 1,
+            "total": 10
+          },
+          "score": 0.1,
+          "status": "complete",
+          "summary": "Answered 1 of 10 baseball research questions correctly."
+        },
+        "decisions": {
+          "headline": "Flawless late-game choices",
+          "metrics": {
+            "mean_wp_delta": 0.0,
+            "near_optimal_count": 8,
+            "near_optimal_rate": 1.0,
+            "total": 8
+          },
+          "score": 1.0,
+          "status": "complete",
+          "summary": "Chose the best or near-best move in 8 of 8 late-game situations."
+        },
+        "league": {
+          "headline": "Not run yet",
+          "metrics": {},
+          "score": null,
+          "status": "missing",
+          "summary": "League play has not run yet for this model."
+        }
+      }
+    }
+  ],
+  "overall_ranking_ready": false,
+  "run_history": [],
+  "track_labels": {
+    "analysis": "Research",
+    "decisions": "Game Moves",
+    "league": "League Play"
+  },
+  "track_leaders": [
+    {
+      "headline": "Leader: qwen/qwen3.6-35b-a3b",
+      "label": "Research",
+      "summary": "Answered 8 of 10 baseball research questions correctly."
+    },
+    {
+      "headline": "6-way tie",
+      "label": "Game Moves",
+      "summary": "Chose the best or near-best move in 8 of 8 late-game situations."
+    },
+    {
+      "headline": "Not finished yet",
+      "label": "League Play",
+      "summary": "League Play has not finished for the current public-model snapshot."
     }
   ]
 }

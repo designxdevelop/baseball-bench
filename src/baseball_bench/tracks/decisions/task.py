@@ -120,3 +120,13 @@ def run_wp_baseline(version: str = "v1", model_name: str = "wp-baseline") -> dic
     write_json(RESULTS_DIR / f"decisions-{model_name}.json", summary)
     return summary
 
+
+def write_decisions_summary(
+    summary: dict[str, object],
+    output_dir: Path = RESULTS_DIR,
+    write_latest: bool = True,
+) -> None:
+    filename = f"decisions-{summary['model'].replace('/', '-')}.json"
+    write_json(output_dir / filename, summary)
+    if write_latest and output_dir != RESULTS_DIR:
+        write_json(RESULTS_DIR / filename, summary)

@@ -1,0 +1,118 @@
+{
+  "kind": "analysis",
+  "model": "openrouter/nvidia/nemotron-3-ultra-550b-a55b",
+  "overall_accuracy": 0.7,
+  "sample_count": 10,
+  "samples": [
+    {
+      "id": "best_k_per_9_2025",
+      "metadata": {
+        "expected_answer": "Victor Hale",
+        "observed_answer": "Victor Hale",
+        "tolerance": null
+      },
+      "output": "{\"answer\": \"Victor Hale\", \"confidence\": 0.95, \"notes\": \"Victor Hale had a K/9 of approximately 10.19 over 181 innings pitched in 2025, the highest among starting pitchers with at least 180 innings.\"}",
+      "score": 1.0,
+      "target": "Victor Hale"
+    },
+    {
+      "id": "best_ops_2024",
+      "metadata": {
+        "expected_answer": "Tyler Grant",
+        "observed_answer": "Tyler Grant",
+        "tolerance": null
+      },
+      "output": "{\n  \"answer\": \"Tyler Grant\",\n  \"confidence\": 0.99,\n  \"notes\": \"Tyler Grant posted an OPS of .903 in 2024 with at least 500 plate appearances, leading all qualifying hitters in the benchmark database.\"\n}",
+      "score": 1.0,
+      "target": "Tyler Grant"
+    },
+    {
+      "id": "best_reliever_era_2025",
+      "metadata": {
+        "expected_answer": "Ryan Sato",
+        "observed_answer": "Ryan Sato",
+        "tolerance": null
+      },
+      "output": "{\n  \"answer\": \"Ryan Sato\",\n  \"confidence\": 0.95,\n  \"notes\": \"Query filtered pitching table for 2025 season, innings pitched \u2265 60, and games_started = 0 (indicating pure relievers). Computed ERA = earned_runs * 9 / innings_pitched. Ryan Sato posted a 2.44 ERA over 70.2 innings, the lowest among qualifying relievers.\"\n}",
+      "score": 1.0,
+      "target": "Ryan Sato"
+    },
+    {
+      "id": "best_run_diff_2025",
+      "metadata": {
+        "expected_answer": "Austin Kings",
+        "observed_answer": "Austin Kings (KNG) had the best run differential in the 2025 seed schedule with a +5 differential (28 runs scored, 23 runs allowed).",
+        "tolerance": null
+      },
+      "output": "{\n  \"answer\": \"Austin Kings (KNG) had the best run differential in the 2025 seed schedule with a +5 differential (28 runs scored, 23 runs allowed).\",\n  \"confidence\": 1.0,\n  \"notes\": \"The 2025 season data consists of 9 games involving three teams: CAP (Brooklyn Captains), FOX (Denver Foxes), and KNG (Austin Kings). Run differential was calculated by summing runs scored minus runs allowed across all games for each team. KNG finished with a +5 differential, CAP -1, and FOX -4.\"\n}",
+      "score": 0.0,
+      "target": "Austin Kings"
+    },
+    {
+      "id": "best_win_pct_2025",
+      "metadata": {
+        "expected_answer": "Austin Kings",
+        "observed_answer": "All three teams (Austin Kings, Denver Foxes, Brooklyn Captains) tied with a .500 winning percentage (3\u20133).",
+        "tolerance": null
+      },
+      "output": "All three teams in the 2025 seed schedule finished with identical **3\u20133 records (.500 winning percentage)**:\n\n- **Austin Kings (KNG)** \u2013 3\u20133, .500  \n- **Denver Foxes (FOX)** \u2013 3\u20133, .500  \n- **Brooklyn Captains (CAP)** \u2013 3\u20133, .500\n\nBecause the nine-game round-robin produced a perfect three-way tie, no single team had a better winning percentage than the others.\n\n```json\n{\n  \"answer\": \"All three teams (Austin Kings, Denver Foxes, Brooklyn Captains) tied with a .500 winning percentage (3\u20133).\",\n  \"confidence\": 1.0,\n  \"notes\": \"The 2025 seed schedule contains only 9 games; each team played 6 games and finished 3\u20133.\"\n}\n```",
+      "score": 0.0,
+      "target": "Austin Kings"
+    },
+    {
+      "id": "count_ops_850_2025",
+      "metadata": {
+        "expected_answer": "3",
+        "observed_answer": "3",
+        "tolerance": null
+      },
+      "output": "{\"answer\": \"3\", \"confidence\": 1.0, \"notes\": \"Three 2025 hitters reached at least a .850 OPS with 450+ plate appearances: Mason Cole (.934 OPS, 640 PA), Tyler Grant (.898 OPS, 630 PA), and Javier Soto (.878 OPS, 610 PA).\"}",
+      "score": 1.0,
+      "target": "3"
+    },
+    {
+      "id": "highest_batting_average_2025",
+      "metadata": {
+        "expected_answer": "Mason Cole",
+        "observed_answer": "Mason Cole",
+        "tolerance": null
+      },
+      "output": "{\"answer\": \"Mason Cole\", \"confidence\": 0.95, \"notes\": \"Based on 2025 batting data, Mason Cole had a .3165 batting average (182 hits in 575 at-bats) with 640 plate appearances, the highest among qualifiers.\"}",
+      "score": 1.0,
+      "target": "Mason Cole"
+    },
+    {
+      "id": "most_home_runs_2025",
+      "metadata": {
+        "expected_answer": "Tyler Grant",
+        "observed_answer": "Tyler Grant hit the most home runs in 2025 with 34 home runs.",
+        "tolerance": null
+      },
+      "output": "{\"answer\": \"Tyler Grant hit the most home runs in 2025 with 34 home runs.\", \"confidence\": 1.0, \"notes\": \"Query of the batting table for season 2025 shows Tyler Grant (player_id p003) with 34 home runs, leading all players that season.\"}",
+      "score": 0.0,
+      "target": "Tyler Grant"
+    },
+    {
+      "id": "noah_kim_obp_2025",
+      "metadata": {
+        "expected_answer": "0.369",
+        "observed_answer": "0.3692022263450835",
+        "tolerance": 0.001
+      },
+      "output": "{\"answer\": \"0.3692022263450835\", \"confidence\": 1.0, \"notes\": \"Calculated from batting stats: hits=137, walks=56, hit_by_pitch=6, at_bats=472, sacrifice_flies=5. Formula: (hits + walks + hit_by_pitch) / (at_bats + walks + hit_by_pitch + sacrifice_flies) = 199 / 539 = 0.3692022263450835\"}",
+      "score": 1.0,
+      "target": "0.369"
+    },
+    {
+      "id": "tyler_grant_total_hr",
+      "metadata": {
+        "expected_answer": "97",
+        "observed_answer": "97",
+        "tolerance": null
+      },
+      "output": "{\"answer\": \"97\", \"confidence\": 1.0, \"notes\": \"Tyler Grant (player_id p003) hit 30 HR in 2023, 33 HR in 2024, and 34 HR in 2025, summing to 97 total home runs.\"}",
+      "score": 1.0,
+      "target": "97"
+    }
+  ]
+}

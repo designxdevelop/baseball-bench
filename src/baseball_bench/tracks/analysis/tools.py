@@ -14,6 +14,11 @@ def sql_tool(database_path: str | None = None, row_limit: int = 50) -> Tool:
     """Execute a read-only SQL query against the benchmark DuckDB database."""
 
     async def execute(sql: str) -> str:
+        """Run a single read-only SQL query and return JSON rows plus column metadata.
+
+        Args:
+            sql: A single SELECT or WITH query against the benchmark DuckDB schema.
+        """
         try:
             result = execute_read_only_query(
                 sql,
@@ -22,7 +27,7 @@ def sql_tool(database_path: str | None = None, row_limit: int = 50) -> Tool:
             )
         except Exception as exc:  # noqa: BLE001
             raise ToolError(str(exc)) from exc
-        return json.dumps(result, indent=2)
+        return json.dumps(result, indent=2, default=str)
 
     return execute
 
@@ -32,7 +37,7 @@ def schema_lookup_tool() -> Tool:
     """Return the documented database schema and common derived metrics."""
 
     async def execute() -> str:
+        """Return the benchmark schema reference as plain text."""
         return schema_text()
 
     return execute
-

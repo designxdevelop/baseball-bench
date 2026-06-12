@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime
+from pathlib import Path
 from statistics import mean
 from typing import Any
 
 from inspect_ai import eval as inspect_eval
 
 from baseball_bench.costs import (
-    BUNDLED_MANAGERS,
     DEFAULT_OPENROUTER_MODELS,
     estimate_costs,
     normalize_openrouter_model_name,
@@ -16,9 +17,18 @@ from baseball_bench.costs import (
 )
 from baseball_bench.data.build import build_database
 from baseball_bench.leaderboard import build_site
-from baseball_bench.paths import LOGS_DIR, RESULTS_DIR
-from baseball_bench.tracks.analysis import analysis_task, generate_questions, run_sql_baseline
-from baseball_bench.tracks.decisions import decisions_task, run_wp_baseline
+from baseball_bench.paths import LOGS_DIR, RESULTS_DIR, RUNS_DIR
+from baseball_bench.tracks.analysis import (
+    analysis_task,
+    generate_questions,
+    run_sql_baseline,
+    write_analysis_summary,
+)
+from baseball_bench.tracks.decisions import (
+    decisions_task,
+    run_wp_baseline,
+    write_decisions_summary,
+)
 from baseball_bench.tracks.league import run_league
 from baseball_bench.utils import write_json
 
@@ -47,7 +57,62 @@ def _resolve_eval_models(args: Any) -> list[str]:
     return [normalize_openrouter_model_name(model) for model in model_names]
 
 
-def _summarize_eval_log(log, kind: str) -> dict[str, object]:
+def _create_run_manifest(
+    *,
+    label: str,
+    models: list[str],
+    games: int,
+    seed: int,
+    baseline: bool,
+) -> tuple[Path, dict[str, object]]:
+    started_at = datetime.now().astimezone()
+    run_id = started_at.strftime("%Y%m%dT%H%M%S-%f")
+    run_dir = RUNS_DIR / run_id
+    run_dir.mkdir(parents=True, exist_ok=False)
+    manifest = {
+        "run_id": run_id,
+        "label": label,
+        "started_at": started_at.isoformat(timespec="seconds"),
+        "status": "running",
+        "baseline": baseline,
+        "models": models,
+        "games_per_matchup": games,
+        "seed": seed,
+        "tracks_completed": [],
+    }
+    write_json(run_dir / "manifest.json", manifest)
+    return run_dir, manifest
+
+
+def _finalize_run_manifest(
+    run_dir: Path,
+    manifest: dict[str, object],
+    *,
+    tracks_completed: list[str],
+) -> None:
+    manifest["status"] = "complete"
+    manifest["completed_at"] = datetime.now().astimezone().isoformat(timespec="seconds")
+    manifest["tracks_completed"] = tracks_completed
+    manifest["artifacts"] = {
+        "leaderboard_json": "leaderboard.json",
+        "site_index": "site/index.html",
+        "result_files": sorted(
+            path.name for path in run_dir.glob("*.json") if path.name != "manifest.json"
+        ),
+    }
+    write_json(run_dir / "manifest.json", manifest)
+
+
+def _build_run_snapshot(run_dir: Path) -> None:
+    build_site(
+        results_dir=run_dir,
+        leaderboard_json_path=run_dir / "leaderboard.json",
+        site_dir=run_dir / "site",
+        site_index_path=run_dir / "site" / "index.html",
+    )
+
+
+def _summarize_eval_log(log, kind: str, output_dir: Path = RESULTS_DIR) -> dict[str, object]:
     scorer = log.results.scores[0] if log.results and log.results.scores else None
     samples = []
     if log.samples:
@@ -82,7 +147,10 @@ def _summarize_eval_log(log, kind: str) -> dict[str, object]:
             "near_optimal_rate": mean(1.0 if sample["metadata"].get("near_optimal") else 0.0 for sample in samples) if samples else 0.0,
             "samples": samples,
         }
-    write_json(RESULTS_DIR / f"{kind}-{log.eval.model.replace('/', '-')}.json", summary)
+    if kind == "analysis":
+        write_analysis_summary(summary, output_dir=output_dir)
+    else:
+        write_decisions_summary(summary, output_dir=output_dir)
     return summary
 
 
@@ -90,14 +158,42 @@ def run_bench(args) -> int:
     build_database()
     generate_questions()
     if args.baseline:
-        run_sql_baseline()
-        run_wp_baseline()
-        run_league(["rulebook", "aggressive", "conservative"], games_per_matchup=args.games, seed=args.seed)
+        baseline_models = ["sql-baseline", "wp-baseline", "rulebook", "aggressive", "conservative"]
+        run_dir, manifest = _create_run_manifest(
+            label="Baseline benchmark",
+            models=baseline_models,
+            games=args.games,
+            seed=args.seed,
+            baseline=True,
+        )
+        analysis_summary = run_sql_baseline()
+        write_analysis_summary(analysis_summary, output_dir=run_dir)
+        decisions_summary = run_wp_baseline()
+        write_decisions_summary(decisions_summary, output_dir=run_dir)
+        run_league(
+            ["rulebook", "aggressive", "conservative"],
+            games_per_matchup=args.games,
+            seed=args.seed,
+            output_dir=run_dir,
+        )
+        _build_run_snapshot(run_dir)
+        _finalize_run_manifest(
+            run_dir,
+            manifest,
+            tracks_completed=["analysis", "decisions", "league"],
+        )
         build_site()
         return 0
 
     model_names = _resolve_eval_models(args)
     require_openrouter_api_key(model_names)
+    run_dir, manifest = _create_run_manifest(
+        label="OpenRouter benchmark",
+        models=model_names,
+        games=args.games,
+        seed=args.seed,
+        baseline=False,
+    )
 
     analysis_logs = inspect_eval(
         analysis_task(),
@@ -112,12 +208,18 @@ def run_bench(args) -> int:
         log_format="json",
     )
     for log in analysis_logs:
-        _summarize_eval_log(log, "analysis")
+        _summarize_eval_log(log, "analysis", output_dir=run_dir)
     for log in decisions_logs:
-        _summarize_eval_log(log, "decisions")
+        _summarize_eval_log(log, "decisions", output_dir=run_dir)
 
     league_models = list(dict.fromkeys(model_names + ["rulebook"]))
-    run_league(league_models, games_per_matchup=args.games, seed=args.seed)
+    run_league(league_models, games_per_matchup=args.games, seed=args.seed, output_dir=run_dir)
+    _build_run_snapshot(run_dir)
+    _finalize_run_manifest(
+        run_dir,
+        manifest,
+        tracks_completed=["analysis", "decisions", "league"],
+    )
     build_site()
     return 0
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from argparse import Namespace
+from pathlib import Path
 
 from baseball_bench import cli
 
@@ -33,8 +34,10 @@ def test_resolve_eval_models_defaults_to_curated_openrouter_pack():
 
 def test_run_bench_batches_models_into_single_inspect_call(monkeypatch):
     inspect_calls: list[tuple[str, list[str]]] = []
-    summarized: list[tuple[str, str]] = []
+    summarized: list[tuple[str, str, Path]] = []
     league_calls: list[list[str]] = []
+    snapshots: list[Path] = []
+    finalized: list[tuple[Path, list[str]]] = []
 
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
     monkeypatch.setattr(cli, "build_database", lambda: None)
@@ -42,6 +45,17 @@ def test_run_bench_batches_models_into_single_inspect_call(monkeypatch):
     monkeypatch.setattr(cli, "analysis_task", lambda: "analysis-task")
     monkeypatch.setattr(cli, "decisions_task", lambda: "decisions-task")
     monkeypatch.setattr(cli, "build_site", lambda: None)
+    monkeypatch.setattr(
+        cli,
+        "_create_run_manifest",
+        lambda **kwargs: (Path("/tmp/test-run"), {"label": "test"}),
+    )
+    monkeypatch.setattr(cli, "_build_run_snapshot", lambda run_dir: snapshots.append(run_dir))
+    monkeypatch.setattr(
+        cli,
+        "_finalize_run_manifest",
+        lambda run_dir, manifest, tracks_completed: finalized.append((run_dir, tracks_completed)),
+    )
 
     def fake_inspect_eval(task, *, model, log_dir, log_format):
         inspect_calls.append((task, list(model)))
@@ -50,11 +64,15 @@ def test_run_bench_batches_models_into_single_inspect_call(monkeypatch):
         return ["decisions-log-1", "decisions-log-2"]
 
     monkeypatch.setattr(cli, "inspect_eval", fake_inspect_eval)
-    monkeypatch.setattr(cli, "_summarize_eval_log", lambda log, kind: summarized.append((kind, log)))
+    monkeypatch.setattr(
+        cli,
+        "_summarize_eval_log",
+        lambda log, kind, output_dir: summarized.append((kind, log, output_dir)),
+    )
     monkeypatch.setattr(
         cli,
         "run_league",
-        lambda models, games_per_matchup, seed: league_calls.append(list(models)),
+        lambda models, games_per_matchup, seed, output_dir: league_calls.append(list(models)),
     )
 
     args = Namespace(
@@ -85,16 +103,18 @@ def test_run_bench_batches_models_into_single_inspect_call(monkeypatch):
         ),
     ]
     assert summarized == [
-        ("analysis", "analysis-log-1"),
-        ("analysis", "analysis-log-2"),
-        ("decisions", "decisions-log-1"),
-        ("decisions", "decisions-log-2"),
+        ("analysis", "analysis-log-1", Path("/tmp/test-run")),
+        ("analysis", "analysis-log-2", Path("/tmp/test-run")),
+        ("decisions", "decisions-log-1", Path("/tmp/test-run")),
+        ("decisions", "decisions-log-2", Path("/tmp/test-run")),
     ]
     assert league_calls == [[
         "openrouter/openai/gpt-5",
         "openrouter/anthropic/claude-4.1",
         "rulebook",
     ]]
+    assert snapshots == [Path("/tmp/test-run")]
+    assert finalized == [(Path("/tmp/test-run"), ["analysis", "decisions", "league"])]
 
 
 def test_run_cost_estimate_uses_estimator_and_prints_summary(monkeypatch, capsys):

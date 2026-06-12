@@ -1,0 +1,118 @@
+{
+  "kind": "analysis",
+  "model": "openrouter/deepseek/deepseek-v4-pro",
+  "overall_accuracy": 0.3,
+  "sample_count": 10,
+  "samples": [
+    {
+      "id": "best_k_per_9_2025",
+      "metadata": {
+        "expected_answer": "Victor Hale",
+        "observed_answer": "Victor Hale (10.19 K/9, 205 strikeouts in 181.0 IP)",
+        "tolerance": null
+      },
+      "output": "## Answer\n\nThe 2025 starting pitcher with the highest strikeouts per nine innings (K/9) among those with at least 180 innings pitched is **Victor Hale**.\n\n| Player | Team | IP | SO | K/9 | GS |\n|--------|------|-----|-----|------|-----|\n| **Victor Hale** | KNG | 181.0 | 205 | **10.19** | 30 |\n| Ben Ortiz | CAP | 192.1 | 212 | 9.93 | 32 |\n| Caleb Foster | FOX | 186.2 | 198 | 9.57 | 31 |\n\nOnly three pitchers met the 180-inning threshold in 2025, and Hale led the group with a 10.19 K/9.\n\n```json\n{\n  \"answer\": \"Victor Hale (10.19 K/9, 205 strikeouts in 181.0 IP)\",\n  \"confidence\": 1.0,\n  \"notes\": \"Only three pitchers met the 180-inning threshold in 2025. Victor Hale (KNG) led with 10.19 K/9, ahead of Ben Ortiz (9.93) and Caleb Foster (9.57).\"\n}\n```",
+      "score": 0.0,
+      "target": "Victor Hale"
+    },
+    {
+      "id": "best_ops_2024",
+      "metadata": {
+        "expected_answer": "Tyler Grant",
+        "observed_answer": "Tyler Grant (0.903 OPS)",
+        "tolerance": null
+      },
+      "output": "The player with the best OPS in 2024 among hitters with at least 500 plate appearances is **Tyler Grant**.\n\n- **OPS:** 0.903\n- **Slugging:** 0.541\n- **On-base Percentage:** 0.362\n- **Plate Appearances:** 640\n- **Stats:** 174 hits (34 2B, 2 3B, 33 HR), 51 walks, 6 HBP in 575 at-bats\n\n```json\n{\"answer\": \"Tyler Grant (0.903 OPS)\", \"confidence\": 0.99, \"notes\": \"Calculated OPS as (OBP + SLG) from the batting table for 2024, filtered to PA >= 500. OBP = (H+BB+HBP)/(AB+BB+HBP+SF); SLG = (1B+2*2B+3*3B+4*HR)/AB.\"}\n```",
+      "score": 0.0,
+      "target": "Tyler Grant"
+    },
+    {
+      "id": "best_reliever_era_2025",
+      "metadata": {
+        "expected_answer": "Ryan Sato",
+        "observed_answer": "The answer is **Ryan Sato**, with a 2.44 ERA over 70.2 innings pitched across 62 relief appearances in 2025.\n\n```json\n{\n  \"answer\": \"Ryan Sato (2.44 ERA in 70.2 IP, 62 games, 0 starts)\",\n  \"confidence\": 1.0,\n  \"notes\": \"Three relievers met the \u226560 IP threshold in 2025: Ryan Sato (2.44), Jack Moreno (2.67), and Noah Evans (2.78). All had zero starts",
+        "tolerance": null
+      },
+      "output": "The answer is **Ryan Sato**, with a 2.44 ERA over 70.2 innings pitched across 62 relief appearances in 2025.\n\n```json\n{\n  \"answer\": \"Ryan Sato (2.44 ERA in 70.2 IP, 62 games, 0 starts)\",\n  \"confidence\": 1.0,\n  \"notes\": \"Three relievers met the \u226560 IP threshold in 2025: Ryan Sato (2.44), Jack Moreno (2.67), and Noah Evans (2.78). All had zero starts",
+      "score": 0.0,
+      "target": "Ryan Sato"
+    },
+    {
+      "id": "best_run_diff_2025",
+      "metadata": {
+        "expected_answer": "Austin Kings",
+        "observed_answer": "",
+        "tolerance": null
+      },
+      "output": "",
+      "score": 0.0,
+      "target": "Austin Kings"
+    },
+    {
+      "id": "best_win_pct_2025",
+      "metadata": {
+        "expected_answer": "Austin Kings",
+        "observed_answer": "All three teams \u2014 Brooklyn Captains, Denver Foxes, and Austin Kings \u2014 tied for the best winning percentage in the 2025 season at .500 (3 wins, 3 losses each).",
+        "tolerance": null
+      },
+      "output": "```json\n{\n  \"answer\": \"All three teams \u2014 Brooklyn Captains, Denver Foxes, and Austin Kings \u2014 tied for the best winning percentage in the 2025 season at .500 (3 wins, 3 losses each).\",\n  \"confidence\": 0.99,\n  \"notes\": \"The 2025 'seed schedule' consists of 9 games (a balanced round-robin where each team plays the other two teams three times home and three times away). Each team finished 3-3, so there is a three-way tie at .500.\"\n}\n```",
+      "score": 0.0,
+      "target": "Austin Kings"
+    },
+    {
+      "id": "count_ops_850_2025",
+      "metadata": {
+        "expected_answer": "3",
+        "observed_answer": "3",
+        "tolerance": null
+      },
+      "output": "```json\n{\n  \"answer\": \"3\",\n  \"confidence\": 0.99,\n  \"notes\": \"In the 2025 season, 3 hitters achieved at least a .850 OPS with at least 450 plate appearances: Mason Cole (.934 OPS, 640 PA), Tyler Grant (.898 OPS, 630 PA), and Javier Soto (.878 OPS, 610 PA).\"\n}\n```",
+      "score": 1.0,
+      "target": "3"
+    },
+    {
+      "id": "highest_batting_average_2025",
+      "metadata": {
+        "expected_answer": "Mason Cole",
+        "observed_answer": "Mason Cole (.31652 batting average: 182 hits in 575 at-bats, 640 plate appearances)",
+        "tolerance": null
+      },
+      "output": "```json\n{\n  \"answer\": \"Mason Cole (.31652 batting average: 182 hits in 575 at-bats, 640 plate appearances)\",\n  \"confidence\": 0.99,\n  \"notes\": \"Query filtered on season=2025, plate_appearances >= 500. Mason Cole (p001) led all qualifiers at .31652, well ahead of second-place Javier Soto at .30275.\"\n}\n```",
+      "score": 0.0,
+      "target": "Mason Cole"
+    },
+    {
+      "id": "most_home_runs_2025",
+      "metadata": {
+        "expected_answer": "Tyler Grant",
+        "observed_answer": "Tyler Grant hit the most home runs in 2025 with 34 home runs.",
+        "tolerance": null
+      },
+      "output": "```json\n{\"answer\": \"Tyler Grant hit the most home runs in 2025 with 34 home runs.\", \"confidence\": 0.99, \"notes\": \"Queried the batting table for 2025 season, joined with players table. Tyler Grant leads with 34 HR, well ahead of second-place Mason Cole (29 HR).\"}\n```",
+      "score": 0.0,
+      "target": "Tyler Grant"
+    },
+    {
+      "id": "noah_kim_obp_2025",
+      "metadata": {
+        "expected_answer": "0.369",
+        "observed_answer": "0.369",
+        "tolerance": 0.001
+      },
+      "output": "{\"answer\": \"0.369\", \"confidence\": 0.99, \"notes\": \"Noah Kim (player_id p004) played for CAP in 2025. OBP = (137 H + 56 BB + 6 HBP) / (472 AB + 56 BB + 6 HBP + 5 SF) = 199/539 = 0.3692, rounded to .369.\"}",
+      "score": 1.0,
+      "target": "0.369"
+    },
+    {
+      "id": "tyler_grant_total_hr",
+      "metadata": {
+        "expected_answer": "97",
+        "observed_answer": "97",
+        "tolerance": null
+      },
+      "output": "Tyler Grant hit **97 home runs** total from 2023 through 2025 inclusive.\n\n```json\n{\"answer\": \"97\", \"confidence\": 1.0, \"notes\": \"Tyler Grant (player_id p003) hit 30 HR in 2023, 33 HR in 2024, and 34 HR in 2025, summing to 97.\"}\n```",
+      "score": 1.0,
+      "target": "97"
+    }
+  ]
+}

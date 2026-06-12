@@ -79,11 +79,61 @@ def _update_elo(winner: Standing, loser: Standing, k_factor: float = 20.0) -> No
     loser.elo += k_factor * (0.0 - (1.0 - expected))
 
 
+def _build_head_to_head(
+    model_names: list[str],
+    games: list[dict[str, object]],
+) -> dict[str, dict[str, dict[str, object]]]:
+    head_to_head: dict[str, dict[str, dict[str, object]]] = {
+        model: {
+            opponent: {
+                "wins": 0,
+                "losses": 0,
+                "runs_for": 0,
+                "runs_against": 0,
+                "games": 0,
+            }
+            for opponent in model_names
+            if opponent != model
+        }
+        for model in model_names
+    }
+    for game in games:
+        home = str(game["home"])
+        away = str(game["away"])
+        home_score = int(game["home_score"])
+        away_score = int(game["away_score"])
+        winner = str(game["winner"])
+
+        home_row = head_to_head[home][away]
+        away_row = head_to_head[away][home]
+        home_row["games"] = int(home_row["games"]) + 1
+        away_row["games"] = int(away_row["games"]) + 1
+        home_row["runs_for"] = int(home_row["runs_for"]) + home_score
+        home_row["runs_against"] = int(home_row["runs_against"]) + away_score
+        away_row["runs_for"] = int(away_row["runs_for"]) + away_score
+        away_row["runs_against"] = int(away_row["runs_against"]) + home_score
+        if winner == home:
+            home_row["wins"] = int(home_row["wins"]) + 1
+            away_row["losses"] = int(away_row["losses"]) + 1
+        else:
+            away_row["wins"] = int(away_row["wins"]) + 1
+            home_row["losses"] = int(home_row["losses"]) + 1
+
+    for opponents in head_to_head.values():
+        for row in opponents.values():
+            games_played = int(row["games"])
+            row["win_pct"] = round(int(row["wins"]) / games_played, 3) if games_played else 0.0
+            row["run_diff"] = int(row["runs_for"]) - int(row["runs_against"])
+    return head_to_head
+
+
 def run_league(
     model_names: list[str],
     games_per_matchup: int = 6,
     seed: int = 7,
     database_path: Path | None = None,
+    output_dir: Path = RESULTS_DIR,
+    write_latest: bool = True,
 ) -> dict[str, object]:
     if len(model_names) < 2:
         raise ValueError("League requires at least two managers.")
@@ -148,7 +198,11 @@ def run_league(
         "game_count": len(games),
         "average_decisions_per_game": mean(game["decision_count"] for game in games) if games else 0.0,
         "standings": standings_table,
+        "head_to_head": _build_head_to_head(model_names, games),
         "games": games,
     }
-    write_json(RESULTS_DIR / f"league-{'-'.join(model_names)}.json", summary)
+    filename = f"league-{'-'.join(model.replace('/', '-') for model in model_names)}.json"
+    write_json(output_dir / filename, summary)
+    if write_latest and output_dir != RESULTS_DIR:
+        write_json(RESULTS_DIR / filename, summary)
     return summary

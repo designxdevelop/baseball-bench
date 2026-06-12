@@ -1,0 +1,121 @@
+{
+  "kind": "decisions",
+  "mean_wp_delta": 0.0,
+  "model": "openrouter/anthropic/claude-fable-5",
+  "near_optimal_rate": 1.0,
+  "sample_count": 8,
+  "samples": [
+    {
+      "id": "s001",
+      "metadata": {
+        "best_action": "steal",
+        "best_wp": 0.56,
+        "chosen_action": "steal",
+        "chosen_wp": 0.56,
+        "near_optimal": true,
+        "wp_delta": 0.0
+      },
+      "output": "```json\n{\"action_id\": \"steal\", \"confidence\": 0.78, \"rationale\": \"Steal offers the highest expected win probability (0.560 vs 0.520 let_hit, 0.490 bunt). With a tie game in the 7th and a runner on first, getting into scoring position with 0 outs maximizes run-scoring chances, and the speed context supports the attempt.\"}\n```",
+      "score": 1.0,
+      "target": "steal"
+    },
+    {
+      "id": "s002",
+      "metadata": {
+        "best_action": "let_hit",
+        "best_wp": 0.67,
+        "chosen_action": "let_hit",
+        "chosen_wp": 0.67,
+        "near_optimal": true,
+        "wp_delta": 0.0
+      },
+      "output": "{\"action_id\": \"let_hit\", \"confidence\": 0.9, \"rationale\": \"Letting Soto hit has the highest expected win probability (0.670) versus pinch hitting (0.630) or bunting (0.610). Bunting gives away an out unnecessarily, and the pinch hitter offers no upgrade per the projections.\"}",
+      "score": 1.0,
+      "target": "let_hit"
+    },
+    {
+      "id": "s003",
+      "metadata": {
+        "best_action": "pinch_hit:p010",
+        "best_wp": 0.49,
+        "chosen_action": "pinch_hit:p010",
+        "chosen_wp": 0.49,
+        "near_optimal": true,
+        "wp_delta": 0.0
+      },
+      "output": "{\"action_id\": \"pinch_hit:p010\", \"confidence\": 0.85, \"rationale\": \"Pinch hitting with Alex Park offers the highest expected win probability (0.490 vs 0.440 letting Brooks hit and 0.410 bunting). Trailing late with two on and no outs, maximizing offensive upside beats playing for one run.\"}",
+      "score": 1.0,
+      "target": "pinch_hit:p010"
+    },
+    {
+      "id": "s004",
+      "metadata": {
+        "best_action": "let_hit",
+        "best_wp": 0.66,
+        "chosen_action": "let_hit",
+        "chosen_wp": 0.66,
+        "near_optimal": true,
+        "wp_delta": 0.0
+      },
+      "output": "{\"action_id\": \"let_hit\", \"confidence\": 0.9, \"rationale\": \"Letting Noah Kim hit has the higher expected win probability (0.660 vs 0.620). With bases loaded and one out in a tie game in the bottom of the 8th, the current batter offers the better outcome, so there's no reason to burn a pinch hitter for a worse expected result.\"}",
+      "score": 1.0,
+      "target": "let_hit"
+    },
+    {
+      "id": "s005",
+      "metadata": {
+        "best_action": "go_to_bullpen:p104",
+        "best_wp": 0.74,
+        "chosen_action": "go_to_bullpen:p104",
+        "chosen_wp": 0.74,
+        "near_optimal": true,
+        "wp_delta": 0.0
+      },
+      "output": "```json\n{\"action_id\": \"go_to_bullpen:p104\", \"confidence\": 0.85, \"rationale\": \"With the tying and go-ahead runs in scoring position and only one out, this is the highest-leverage moment of the game. Jack Moreno offers the best expected win probability (0.740), a 5-point edge over staying with Ortiz. Bringing in the fresh, higher-upside arm to get a strikeout or weak contact is the clear value-maximizing move.\"}\n```",
+      "score": 1.0,
+      "target": "go_to_bullpen:p104"
+    },
+    {
+      "id": "s006",
+      "metadata": {
+        "best_action": "pinch_hit:p011",
+        "best_wp": 0.42,
+        "chosen_action": "pinch_hit:p011",
+        "chosen_wp": 0.42,
+        "near_optimal": true,
+        "wp_delta": 0.0
+      },
+      "output": "{\"action_id\": \"pinch_hit:p011\", \"confidence\": 0.85, \"rationale\": \"Pinch hitting with Marco Vega offers the highest expected win probability (0.420 vs 0.390 for stealing and 0.360 for letting Price hit). Down one in the bottom of the ninth with one out, maximizing offensive quality at the plate is the best lever available.\"}",
+      "score": 1.0,
+      "target": "pinch_hit:p011"
+    },
+    {
+      "id": "s007",
+      "metadata": {
+        "best_action": "go_to_bullpen:p106",
+        "best_wp": 0.54,
+        "chosen_action": "go_to_bullpen:p106",
+        "chosen_wp": 0.54,
+        "near_optimal": true,
+        "wp_delta": 0.0
+      },
+      "output": "{\"action_id\": \"go_to_bullpen:p106\", \"confidence\": 0.85, \"rationale\": \"Tie game in the 8th with a tiring starter and runner on 1st is a high-leverage spot. Noah Evans offers the highest expected win probability (0.540), a 6-point edge over staying with Hale and 3 points over Moreno. Fresh bullpen makes this an easy call.\"}",
+      "score": 1.0,
+      "target": "go_to_bullpen:p106"
+    },
+    {
+      "id": "s008",
+      "metadata": {
+        "best_action": "let_hit",
+        "best_wp": 0.58,
+        "chosen_action": "let_hit",
+        "chosen_wp": 0.58,
+        "near_optimal": true,
+        "wp_delta": 0.0
+      },
+      "output": "```json\n{\"action_id\": \"let_hit\", \"confidence\": 0.75, \"rationale\": \"Letting Soto swing away offers the higher expected win probability (0.580 vs 0.550). With the winning run on second and two outs, there's no strategic reason to take the lower-WP pinch hit option.\"}\n```",
+      "score": 1.0,
+      "target": "let_hit"
+    }
+  ]
+}
