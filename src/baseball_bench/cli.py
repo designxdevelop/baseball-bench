@@ -31,6 +31,7 @@ from baseball_bench.tracks.decisions import (
 )
 from baseball_bench.tracks.gm import run_gm_roster, run_gm_rosters, team_roster_from_build
 from baseball_bench.tracks.league import build_controlled_roster, run_league, run_manager_plans
+from baseball_bench.tracks.league.eval_modes import LeagueEvalConfig, resolve_league_eval_config
 from baseball_bench.utils import write_json
 
 
@@ -65,6 +66,7 @@ def _create_run_manifest(
     games: int,
     seed: int,
     baseline: bool,
+    eval_config: LeagueEvalConfig | None = None,
 ) -> tuple[Path, dict[str, object]]:
     started_at = datetime.now().astimezone()
     run_id = started_at.strftime("%Y%m%dT%H%M%S-%f")
@@ -81,6 +83,9 @@ def _create_run_manifest(
         "seed": seed,
         "tracks_completed": [],
     }
+    if eval_config is not None:
+        manifest["evaluation_mode"] = eval_config.evaluation_mode
+        manifest["eval_config"] = eval_config.as_metadata()
     write_json(run_dir / "manifest.json", manifest)
     return run_dir, manifest
 
@@ -112,6 +117,11 @@ def _update_run_manifest(
     active_track: str,
     tracks_completed: list[str],
 ) -> None:
+    completed = ", ".join(tracks_completed) if tracks_completed else "none"
+    print(
+        f"[baseball-bench] active_track={active_track} completed={completed} run_dir={run_dir}",
+        flush=True,
+    )
     manifest["status"] = "running"
     manifest["active_track"] = active_track
     manifest["tracks_completed"] = tracks_completed
@@ -119,8 +129,19 @@ def _update_run_manifest(
     write_json(run_dir / "manifest.json", manifest)
 
 
-def _league_games_arg(args: Any) -> int | None:
-    return None if getattr(args, "full_league", False) else getattr(args, "league_games", None)
+def _resolve_eval_config_from_args(args: Any) -> LeagueEvalConfig:
+    return resolve_league_eval_config(
+        mode=getattr(args, "mode", None),
+        league_games=None if getattr(args, "full_league", False) else getattr(args, "league_games", None),
+        live_call_start_inning=getattr(args, "live_call_start_inning", None),
+        live_call_max_score_gap=getattr(args, "live_call_max_score_gap", None),
+        max_live_calls_per_team=getattr(args, "max_live_calls_per_team", None),
+        enable_open_league=getattr(args, "enable_open_league", None),
+    )
+
+
+def _league_games_arg(args: Any, eval_config: LeagueEvalConfig) -> int | None:
+    return None if getattr(args, "full_league", False) else eval_config.league_games
 
 
 def _build_run_snapshot(run_dir: Path) -> None:
@@ -177,6 +198,7 @@ def _summarize_eval_log(log, kind: str, output_dir: Path = RESULTS_DIR) -> dict[
 def run_bench(args) -> int:
     build_database()
     generate_questions()
+    eval_config = _resolve_eval_config_from_args(args)
     if args.baseline:
         baseline_models = ["sql-baseline", "wp-baseline", "rulebook", "aggressive", "conservative"]
         run_dir, manifest = _create_run_manifest(
@@ -185,6 +207,7 @@ def run_bench(args) -> int:
             games=args.games,
             seed=args.seed,
             baseline=True,
+            eval_config=eval_config,
         )
         _update_run_manifest(run_dir, manifest, active_track="analysis", tracks_completed=[])
         analysis_summary = run_sql_baseline()
@@ -208,10 +231,11 @@ def run_bench(args) -> int:
             gm_models,
             games_per_matchup=args.games,
             seed=args.seed,
-            league_games=_league_games_arg(args),
+            league_games=_league_games_arg(args, eval_config),
             league_kind="controlled_league",
             rosters_by_model=planned_rosters,
             output_dir=run_dir,
+            eval_config=eval_config,
         )
         _build_run_snapshot(run_dir)
         _finalize_run_manifest(
@@ -230,6 +254,7 @@ def run_bench(args) -> int:
         games=args.games,
         seed=args.seed,
         baseline=False,
+        eval_config=eval_config,
     )
     _update_run_manifest(run_dir, manifest, active_track="analysis", tracks_completed=[])
 
@@ -252,7 +277,7 @@ def run_bench(args) -> int:
         _summarize_eval_log(log, "decisions", output_dir=run_dir)
 
     _update_run_manifest(run_dir, manifest, active_track="gm", tracks_completed=["analysis", "decisions"])
-    run_gm_rosters(model_names, output_dir=run_dir)
+    gm_builds = run_gm_rosters(model_names, output_dir=run_dir)
     league_models = list(dict.fromkeys(model_names + ["rulebook"]))
     _update_run_manifest(run_dir, manifest, active_track="manager_plan", tracks_completed=["analysis", "decisions", "gm"])
     controlled_roster = build_controlled_roster()
@@ -262,16 +287,36 @@ def run_bench(args) -> int:
         league_models,
         games_per_matchup=args.games,
         seed=args.seed,
-        league_games=_league_games_arg(args),
+        league_games=_league_games_arg(args, eval_config),
         league_kind="controlled_league",
         rosters_by_model=planned_rosters,
         output_dir=run_dir,
+        eval_config=eval_config,
     )
+    tracks_completed = ["analysis", "decisions", "gm", "controlled_league"]
+    if eval_config.enable_open_league:
+        _update_run_manifest(run_dir, manifest, active_track="open_league", tracks_completed=tracks_completed)
+        rosters_by_model = {
+            str(build["model"]): team_roster_from_build(build)
+            for build in gm_builds
+            if build.get("roster", {}).get("validation", {}).get("valid")
+        }
+        run_league(
+            model_names,
+            games_per_matchup=args.games,
+            seed=args.seed,
+            league_games=_league_games_arg(args, eval_config),
+            league_kind="open_league",
+            rosters_by_model=rosters_by_model,
+            output_dir=run_dir,
+            eval_config=eval_config,
+        )
+        tracks_completed.append("open_league")
     _build_run_snapshot(run_dir)
     _finalize_run_manifest(
         run_dir,
         manifest,
-        tracks_completed=["analysis", "decisions", "gm", "controlled_league"],
+        tracks_completed=tracks_completed,
     )
     build_site()
     return 0
@@ -279,10 +324,12 @@ def run_bench(args) -> int:
 
 def run_cost_estimate(args: Any) -> int:
     model_names = _resolve_eval_models(args)
+    eval_config = _resolve_eval_config_from_args(args)
     summary = estimate_costs(
         model_names,
         games_per_matchup=args.games,
-        league_games=getattr(args, "league_games", None),
+        league_games=_league_games_arg(args, eval_config),
+        estimated_decisions_per_game=eval_config.max_live_calls_per_team * 2,
         allow_network=not getattr(args, "offline", False),
     )
     write_cost_estimate(summary)
@@ -296,6 +343,15 @@ def run_cost_estimate(args: Any) -> int:
             f"league=${item['league_cost_usd']:.4f})"
         )
     return 0
+
+
+def _add_eval_mode_args(parser: argparse.ArgumentParser, *, include_open_league: bool = False) -> None:
+    parser.add_argument("--mode", choices=["public-refresh", "deep-eval"], default="public-refresh")
+    parser.add_argument("--live-call-start-inning", type=int)
+    parser.add_argument("--live-call-max-score-gap", type=int)
+    parser.add_argument("--max-live-calls-per-team", type=int)
+    if include_open_league:
+        parser.add_argument("--enable-open-league", action="store_true")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -312,9 +368,10 @@ def main(argv: list[str] | None = None) -> int:
     league_parser.add_argument("--model", action="append")
     league_parser.add_argument("--models")
     league_parser.add_argument("--games", type=int, default=6)
-    league_parser.add_argument("--league-games", type=int, default=12)
+    league_parser.add_argument("--league-games", type=int)
     league_parser.add_argument("--full-league", action="store_true")
     league_parser.add_argument("--seed", type=int, default=7)
+    _add_eval_mode_args(league_parser)
 
     gm_parser = subparsers.add_parser("run-gm")
     gm_parser.add_argument("--model", action="append")
@@ -325,26 +382,29 @@ def main(argv: list[str] | None = None) -> int:
     open_league_parser.add_argument("--model", action="append")
     open_league_parser.add_argument("--models")
     open_league_parser.add_argument("--games", type=int, default=6)
-    open_league_parser.add_argument("--league-games", type=int, default=12)
+    open_league_parser.add_argument("--league-games", type=int)
     open_league_parser.add_argument("--full-league", action="store_true")
     open_league_parser.add_argument("--seed", type=int, default=7)
     open_league_parser.add_argument("--offline-gm", action="store_true")
+    _add_eval_mode_args(open_league_parser)
 
     estimate_parser = subparsers.add_parser("estimate-cost")
     estimate_parser.add_argument("--model", action="append")
     estimate_parser.add_argument("--models")
     estimate_parser.add_argument("--games", type=int, default=6)
-    estimate_parser.add_argument("--league-games", type=int, default=12)
+    estimate_parser.add_argument("--league-games", type=int)
     estimate_parser.add_argument("--offline", action="store_true")
+    _add_eval_mode_args(estimate_parser)
 
     bench_parser = subparsers.add_parser("run-bench")
     bench_parser.add_argument("--baseline", action="store_true")
     bench_parser.add_argument("--model", action="append")
     bench_parser.add_argument("--models")
     bench_parser.add_argument("--games", type=int, default=6)
-    bench_parser.add_argument("--league-games", type=int, default=12)
+    bench_parser.add_argument("--league-games", type=int)
     bench_parser.add_argument("--full-league", action="store_true")
     bench_parser.add_argument("--seed", type=int, default=7)
+    _add_eval_mode_args(bench_parser, include_open_league=True)
 
     args = parser.parse_args(argv)
     if args.command == "build-data":
@@ -364,12 +424,14 @@ def main(argv: list[str] | None = None) -> int:
         if len(model_names) < 2:
             raise ValueError("League needs at least two resolved models.")
         require_openrouter_api_key(model_names)
+        eval_config = _resolve_eval_config_from_args(args)
         run_league(
             model_names,
             games_per_matchup=args.games,
             seed=args.seed,
-            league_games=_league_games_arg(args),
+            league_games=_league_games_arg(args, eval_config),
             league_kind="controlled_league",
+            eval_config=eval_config,
         )
         return 0
     if args.command == "run-gm":
@@ -386,13 +448,15 @@ def main(argv: list[str] | None = None) -> int:
             for build in builds
             if build.get("roster", {}).get("validation", {}).get("valid")
         }
+        eval_config = _resolve_eval_config_from_args(args)
         run_league(
             model_names,
             games_per_matchup=args.games,
             seed=args.seed,
-            league_games=_league_games_arg(args),
+            league_games=_league_games_arg(args, eval_config),
             league_kind="open_league",
             rosters_by_model=rosters_by_model,
+            eval_config=eval_config,
         )
         return 0
     if args.command == "build-site":

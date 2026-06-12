@@ -4,6 +4,10 @@ from dataclasses import dataclass, field, replace
 from random import Random
 
 from baseball_bench.core import ActionType, BenchOption, BullpenOption, DecisionOption, GameState, ManagerDecision, RunnerState, make_action_id
+from baseball_bench.tracks.league.eval_modes import LeagueEvalConfig
+
+
+BUNDLED_MANAGERS = {"rulebook", "aggressive", "conservative"}
 
 
 @dataclass
@@ -91,6 +95,60 @@ class GameResult:
     decision_log: list[dict[str, object]]
     home_bullpen_rest: dict[str, int] = field(default_factory=dict)
     away_bullpen_rest: dict[str, int] = field(default_factory=dict)
+
+
+def _hitter_summary(hitter: HitterProfile) -> str:
+    avg = (hitter.singles + hitter.doubles + hitter.triples + hitter.home_runs) / max(hitter.pa, 1)
+    obp = (hitter.singles + hitter.doubles + hitter.triples + hitter.home_runs + hitter.walks) / max(hitter.pa, 1)
+    slg = (
+        hitter.singles + (2 * hitter.doubles) + (3 * hitter.triples) + (4 * hitter.home_runs)
+    ) / max(hitter.pa, 1)
+    return (
+        f"2025 line approx AVG {avg:.3f}, OBP {obp:.3f}, SLG {slg:.3f}, "
+        f"HR {hitter.home_runs}, BB {hitter.walks}, SO {hitter.strikeouts}"
+    )
+
+
+def _pitcher_summary(pitcher: PitcherProfile) -> str:
+    innings = max(pitcher.innings_pitched, 1.0)
+    return (
+        f"2025 rates K/9 {(pitcher.strikeouts * 9 / innings):.1f}, "
+        f"BB/9 {(pitcher.walks * 9 / innings):.1f}, "
+        f"HR/9 {(pitcher.home_runs_allowed * 9 / innings):.1f}, "
+        f"H/9 {(pitcher.hits_allowed * 9 / innings):.1f}"
+    )
+
+
+def _fallback_decision(options: list[DecisionOption]) -> ManagerDecision:
+    stay = next((option.action_id for option in options if option.action_type == ActionType.STAY_WITH_PITCHER), None)
+    if stay:
+        return ManagerDecision(action_id=stay, rationale="Routine spot outside the live-call policy.")
+    let_hit = next((option.action_id for option in options if option.action_type == ActionType.LET_HIT), None)
+    if let_hit:
+        return ManagerDecision(action_id=let_hit, rationale="Routine spot outside the live-call policy.")
+    return ManagerDecision(action_id=options[0].action_id, rationale="Routine spot outside the live-call policy.")
+
+
+def _decide_with_policy(
+    manager,
+    state: GameState,
+    options: list[DecisionOption],
+    *,
+    eval_config: LeagueEvalConfig,
+    live_call_counts: dict[str, int],
+    team_name: str,
+) -> tuple[ManagerDecision, bool]:
+    if manager.name in BUNDLED_MANAGERS:
+        return manager.decide(state, options), False
+    should_call = eval_config.should_call_live(
+        inning=state.inning,
+        score_gap=abs(state.home_score - state.away_score),
+        team_live_calls=live_call_counts.get(team_name, 0),
+    )
+    if not should_call:
+        return _fallback_decision(options), False
+    live_call_counts[team_name] = live_call_counts.get(team_name, 0) + 1
+    return manager.decide(state, options), True
 
 
 def _apply_offensive_decision(
@@ -422,7 +480,10 @@ def simulate_game(
     seed: int,
     home_bullpen_rest: dict[str, int] | None = None,
     away_bullpen_rest: dict[str, int] | None = None,
+    eval_config: LeagueEvalConfig | None = None,
+    park_name: str | None = None,
 ) -> GameResult:
+    eval_config = eval_config or LeagueEvalConfig()
     rng = Random(seed)
     home_score = 0
     away_score = 0
@@ -439,6 +500,7 @@ def simulate_game(
     away_index = 0
     home_fatigue = 0
     away_fatigue = 0
+    live_call_counts = {home_manager.name: 0, away_manager.name: 0}
 
     inning = 1
     while inning <= 9 or home_score == away_score:
@@ -478,21 +540,51 @@ def simulate_game(
                     home_score=home_score,
                     away_score=away_score,
                     batter_name=batting_lineup[(home_index if batting_home else away_index) % len(batting_lineup)].name,
+                    batter_bats=batting_lineup[(home_index if batting_home else away_index) % len(batting_lineup)].bats,
+                    batter_summary=_hitter_summary(
+                        batting_lineup[(home_index if batting_home else away_index) % len(batting_lineup)]
+                    ),
                     pitcher_name=current_pitcher.name,
+                    pitcher_throws=current_pitcher.throws,
+                    pitcher_role=current_pitcher.role,
+                    pitcher_summary=_pitcher_summary(current_pitcher),
+                    pitcher_fatigue=away_fatigue if batting_home else home_fatigue,
+                    times_through_order=1
+                    + ((home_index if batting_home else away_index) // max(len(batting_lineup), 1)),
+                    park_name=park_name,
+                    park_factor=park_factor,
                     leverage_index=leverage_index,
                     bullpen=[
                         BullpenOption(
                             player_id=arm.player_id,
                             name=arm.name,
                             throws=arm.throws,
+                            role=bullpen_roles.get(arm.player_id, arm.role),
                             stamina=bullpen_rest.get(arm.player_id, 100),
+                            summary=_pitcher_summary(arm),
                         )
                         for arm in bullpen_menu[:2]
                     ],
                 )
                 options = pitching_options(bullpen_menu, current_pitcher)
-                decision = fielding_manager.decide(state, options)
-                decision_log.append({"phase": "pitching", "manager": fielding_manager.name, "decision": decision.action_id, "inning": inning, "half": half})
+                decision, live_model_call = _decide_with_policy(
+                    fielding_manager,
+                    state,
+                    options,
+                    eval_config=eval_config,
+                    live_call_counts=live_call_counts,
+                    team_name=fielding_manager.name,
+                )
+                decision_log.append(
+                    {
+                        "phase": "pitching",
+                        "manager": fielding_manager.name,
+                        "decision": decision.action_id,
+                        "inning": inning,
+                        "half": half,
+                        "live_model_call": live_model_call,
+                    }
+                )
                 if decision.action_id.startswith("go_to_bullpen:"):
                     arm_id = decision.action_id.split(":", 1)[1]
                     replacement_pitcher = next((arm for arm in bullpen if arm.player_id == arm_id), None)
@@ -525,15 +617,49 @@ def simulate_game(
                     home_score=home_score,
                     away_score=away_score,
                     batter_name=batter.name,
+                    batter_bats=batter.bats,
+                    batter_summary=_hitter_summary(batter),
                     pitcher_name=current_pitcher.name,
+                    pitcher_throws=current_pitcher.throws,
+                    pitcher_role=current_pitcher.role,
+                    pitcher_summary=_pitcher_summary(current_pitcher),
+                    pitcher_fatigue=away_fatigue if batting_home else home_fatigue,
+                    times_through_order=1 + (batter_idx // max(len(batting_lineup), 1)),
+                    park_name=park_name,
+                    park_factor=park_factor,
                     leverage_index=1.8 if inning >= 7 and abs(home_score - away_score) <= 1 else 1.0,
-                    bench=[BenchOption(player_id=player.player_id, name=player.name, bats=player.bats) for player in batting_bench[:1]],
+                    bench=[
+                        BenchOption(
+                            player_id=player.player_id,
+                            name=player.name,
+                            bats=player.bats,
+                            position=player.position,
+                            summary=_hitter_summary(player),
+                        )
+                        for player in batting_bench[:1]
+                    ],
                 )
                 notes: list[str] = []
                 if inning >= 7 and (runners.first or batting_bench):
                     options = offensive_options(state, batting_bench)
-                    decision = manager.decide(state, options)
-                    decision_log.append({"phase": "offense", "manager": manager.name, "decision": decision.action_id, "inning": inning, "half": half})
+                    decision, live_model_call = _decide_with_policy(
+                        manager,
+                        state,
+                        options,
+                        eval_config=eval_config,
+                        live_call_counts=live_call_counts,
+                        team_name=manager.name,
+                    )
+                    decision_log.append(
+                        {
+                            "phase": "offense",
+                            "manager": manager.name,
+                            "decision": decision.action_id,
+                            "inning": inning,
+                            "half": half,
+                            "live_model_call": live_model_call,
+                        }
+                    )
                     batter, notes = _apply_offensive_decision(decision, state, batter, batting_bench, rng)
                     outs = state.outs
                     runners = state.runners

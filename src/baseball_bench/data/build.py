@@ -33,7 +33,8 @@ def _create_tables(conn: duckdb.DuckDBPyConnection) -> None:
           team_id varchar primary key,
           city varchar not null,
           nickname varchar not null,
-          league varchar not null
+          league varchar not null,
+          venue_name varchar not null
         );
 
         create table players (
@@ -153,4 +154,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

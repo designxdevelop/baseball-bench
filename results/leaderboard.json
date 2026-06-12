@@ -1,0 +1,44 @@
+{
+  "internal_models": [],
+  "league_runs": [],
+  "models": [],
+  "open_league_runs": [],
+  "overall_ranking_ready": false,
+  "run_history": [],
+  "track_labels": {
+    "analysis": "Research",
+    "decisions": "Game Moves",
+    "gm": "GM Build",
+    "league": "Manager League"
+  },
+  "track_leaders": [
+    {
+      "headline": "Not finished yet",
+      "label": "Research AVG",
+      "leader": "Not finished yet",
+      "summary": "Research AVG has not finished for the current public-model snapshot.",
+      "value": "&mdash;"
+    },
+    {
+      "headline": "Not finished yet",
+      "label": "Decision AVG",
+      "leader": "Not finished yet",
+      "summary": "Decision AVG has not finished for the current public-model snapshot.",
+      "value": "&mdash;"
+    },
+    {
+      "headline": "Not finished yet",
+      "label": "GM Score",
+      "leader": "Not finished yet",
+      "summary": "GM Score has not finished for the current public-model snapshot.",
+      "value": "&mdash;"
+    },
+    {
+      "headline": "Not finished yet",
+      "label": "League PCT",
+      "leader": "Not finished yet",
+      "summary": "League PCT has not finished for the current public-model snapshot.",
+      "value": "&mdash;"
+    }
+  ]
+}

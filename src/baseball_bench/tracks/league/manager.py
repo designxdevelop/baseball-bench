@@ -74,7 +74,7 @@ class LLMManager:
         prompt = "\n".join(
             [
                 "You are managing a baseball team in a simulation.",
-                state.summary(),
+                state.manager_prompt_context(),
                 "Choose exactly one action from this menu:",
                 *[f"- {option.action_id}: {option.label}" for option in options],
                 'Return JSON: {"action_id": "...", "rationale": "..."}',
@@ -109,4 +109,3 @@ def build_manager(name: str) -> Manager:
     if name == "conservative":
         return ConservativeManager()
     return LLMManager(name)
-

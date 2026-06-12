@@ -1,0 +1,10 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "baseball-bench",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-06-11",
+  "assets": {
+    "directory": "./results",
+    "binding": "ASSETS"
+  }
+}

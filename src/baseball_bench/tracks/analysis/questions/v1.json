@@ -1,7 +1,7 @@
 [
   {
     "answer_type": "string",
-    "expected_answer": "Mason Cole",
+    "expected_answer": "Aaron Judge",
     "id": "highest_batting_average_2025",
     "prompt": "Which player had the highest batting average in 2025 among hitters with at least 500 plate appearances?",
     "sql": "select p.first_name || ' ' || p.last_name as answer\n            from batting b\n            join players p on p.player_id = b.player_id\n            where b.season = 2025 and b.plate_appearances >= 500\n            order by cast(b.hits as double) / b.at_bats desc, answer asc\n            limit 1",
@@ -10,7 +10,7 @@
   },
   {
     "answer_type": "string",
-    "expected_answer": "Tyler Grant",
+    "expected_answer": "Caleb Raleigh",
     "id": "most_home_runs_2025",
     "prompt": "Which player hit the most home runs in 2025?",
     "sql": "select p.first_name || ' ' || p.last_name as answer\n            from batting b\n            join players p on p.player_id = b.player_id\n            where b.season = 2025\n            order by b.home_runs desc, answer asc\n            limit 1",
@@ -19,25 +19,25 @@
   },
   {
     "answer_type": "string",
-    "expected_answer": "Tyler Grant",
-    "id": "best_ops_2024",
-    "prompt": "Which player posted the best OPS in 2024 among hitters with at least 500 plate appearances?",
-    "sql": "with stats as (\n              select\n                p.first_name || ' ' || p.last_name as answer,\n                ((b.hits + b.walks + b.hit_by_pitch) * 1.0 / (b.at_bats + b.walks + b.hit_by_pitch + b.sacrifice_flies))\n                +\n                (((b.hits - b.doubles - b.triples - b.home_runs) + 2 * b.doubles + 3 * b.triples + 4 * b.home_runs) * 1.0 / b.at_bats)\n                as ops\n              from batting b\n              join players p on p.player_id = b.player_id\n              where b.season = 2024 and b.plate_appearances >= 500\n            )\n            select answer from stats order by ops desc, answer asc limit 1",
+    "expected_answer": "Aaron Judge",
+    "id": "best_ops_2025",
+    "prompt": "Which player posted the best OPS in 2025 among hitters with at least 500 plate appearances?",
+    "sql": "with stats as (\n              select\n                p.first_name || ' ' || p.last_name as answer,\n                ((b.hits + b.walks + b.hit_by_pitch) * 1.0 / (b.at_bats + b.walks + b.hit_by_pitch + b.sacrifice_flies))\n                +\n                (((b.hits - b.doubles - b.triples - b.home_runs) + 2 * b.doubles + 3 * b.triples + 4 * b.home_runs) * 1.0 / b.at_bats)\n                as ops\n              from batting b\n              join players p on p.player_id = b.player_id\n              where b.season = 2025 and b.plate_appearances >= 500\n            )\n            select answer from stats order by ops desc, answer asc limit 1",
     "tier": "medium",
     "tolerance": null
   },
   {
     "answer_type": "string",
-    "expected_answer": "Austin Kings",
+    "expected_answer": "Milwaukee Brewers",
     "id": "best_run_diff_2025",
-    "prompt": "Which team had the best run differential in the 2025 seed schedule?",
+    "prompt": "Which team had the best run differential in the 2025 regular season?",
     "sql": "with team_runs as (\n              select home_team_id as team_id, sum(home_score) as runs_for, sum(away_score) as runs_against from games where season = 2025 group by home_team_id\n              union all\n              select away_team_id as team_id, sum(away_score) as runs_for, sum(home_score) as runs_against from games where season = 2025 group by away_team_id\n            ),\n            rolled as (\n              select team_id, sum(runs_for) as runs_for, sum(runs_against) as runs_against\n              from team_runs\n              group by team_id\n            )\n            select city || ' ' || nickname as answer\n            from rolled r\n            join teams t on t.team_id = r.team_id\n            order by (runs_for - runs_against) desc, answer asc\n            limit 1",
     "tier": "medium",
     "tolerance": null
   },
   {
     "answer_type": "string",
-    "expected_answer": "Victor Hale",
+    "expected_answer": "Garrett Crochet",
     "id": "best_k_per_9_2025",
     "prompt": "Which 2025 starting pitcher had the highest strikeouts per nine innings among pitchers with at least 180 innings pitched?",
     "sql": "select p.first_name || ' ' || p.last_name as answer\n            from pitching pi\n            join players p on p.player_id = pi.player_id\n            where pi.season = 2025 and pi.games_started > 0 and pi.innings_pitched >= 180\n            order by (pi.strikeouts * 9.0 / pi.innings_pitched) desc, answer asc\n            limit 1",
@@ -46,25 +46,25 @@
   },
   {
     "answer_type": "number",
-    "expected_answer": "0.369",
-    "id": "noah_kim_obp_2025",
-    "prompt": "What was Noah Kim's on-base percentage in 2025? Return just the decimal value.",
-    "sql": "select round((hits + walks + hit_by_pitch) * 1.0 / (at_bats + walks + hit_by_pitch + sacrifice_flies), 3) as answer\n            from batting\n            where season = 2025 and player_id = 'p004'",
+    "expected_answer": "0.359",
+    "id": "hr_leader_obp_2025",
+    "prompt": "What was the on-base percentage of the 2025 home run leader? Return just the decimal value.",
+    "sql": "with hr_leader as (\n              select player_id\n              from batting\n              where season = 2025\n              order by home_runs desc, player_id asc\n              limit 1\n            )\n            select round((hits + walks + hit_by_pitch) * 1.0 / (at_bats + walks + hit_by_pitch + sacrifice_flies), 3) as answer\n            from batting\n            where season = 2025 and player_id in (select player_id from hr_leader)",
     "tier": "hard",
     "tolerance": 0.001
   },
   {
     "answer_type": "number",
-    "expected_answer": "97",
-    "id": "tyler_grant_total_hr",
-    "prompt": "How many total home runs did Tyler Grant hit from 2023 through 2025 inclusive?",
-    "sql": "select sum(home_runs) as answer\n            from batting\n            where player_id = 'p003' and season between 2023 and 2025",
+    "expected_answer": "53",
+    "id": "batting_average_leader_home_runs_2025",
+    "prompt": "How many home runs did the 2025 batting average leader hit?",
+    "sql": "with batting_average_leader as (\n              select player_id\n              from batting\n              where season = 2025 and plate_appearances >= 500\n              order by cast(hits as double) / at_bats desc, player_id asc\n              limit 1\n            )\n            select home_runs as answer\n            from batting\n            where season = 2025 and player_id in (select player_id from batting_average_leader)",
     "tier": "easy",
     "tolerance": null
   },
   {
     "answer_type": "number",
-    "expected_answer": "3",
+    "expected_answer": "22",
     "id": "count_ops_850_2025",
     "prompt": "How many 2025 hitters reached at least a .850 OPS while also recording at least 450 plate appearances?",
     "sql": "with stats as (\n              select\n                player_id,\n                (((hits + walks + hit_by_pitch) * 1.0 / (at_bats + walks + hit_by_pitch + sacrifice_flies))\n                +\n                (((hits - doubles - triples - home_runs) + 2 * doubles + 3 * triples + 4 * home_runs) * 1.0 / at_bats)) as ops\n              from batting\n              where season = 2025 and plate_appearances >= 450\n            )\n            select count(*) as answer from stats where ops >= 0.850",
@@ -73,7 +73,7 @@
   },
   {
     "answer_type": "string",
-    "expected_answer": "Ryan Sato",
+    "expected_answer": "Albertin Chapman",
     "id": "best_reliever_era_2025",
     "prompt": "Which 2025 reliever had the lowest ERA among relievers with at least 60 innings pitched?",
     "sql": "select p.first_name || ' ' || p.last_name as answer\n            from pitching pi\n            join players p on p.player_id = pi.player_id\n            where pi.season = 2025 and pi.games_started = 0 and pi.innings_pitched >= 60\n            order by (pi.earned_runs * 9.0 / pi.innings_pitched) asc, answer asc\n            limit 1",
@@ -82,9 +82,9 @@
   },
   {
     "answer_type": "string",
-    "expected_answer": "Austin Kings",
+    "expected_answer": "Milwaukee Brewers",
     "id": "best_win_pct_2025",
-    "prompt": "Which team had the best winning percentage in the 2025 seed schedule?",
+    "prompt": "Which team had the best winning percentage in the 2025 regular season?",
     "sql": "with team_results as (\n              select home_team_id as team_id, sum(case when home_score > away_score then 1 else 0 end) as wins, count(*) as games\n              from games where season = 2025 group by home_team_id\n              union all\n              select away_team_id as team_id, sum(case when away_score > home_score then 1 else 0 end) as wins, count(*) as games\n              from games where season = 2025 group by away_team_id\n            ),\n            rolled as (\n              select team_id, sum(wins) as wins, sum(games) as games\n              from team_results\n              group by team_id\n            )\n            select city || ' ' || nickname as answer\n            from rolled r join teams t on t.team_id = r.team_id\n            order by (wins * 1.0 / games) desc, answer asc\n            limit 1",
     "tier": "hard",
     "tolerance": null

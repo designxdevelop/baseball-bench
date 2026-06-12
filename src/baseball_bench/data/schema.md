@@ -5,6 +5,7 @@
 - `city`
 - `nickname`
 - `league`
+- `venue_name`
 
 ## players
 - `player_id`
@@ -71,4 +72,3 @@ Derived metrics often used in queries:
 - `runner_state`: three-character base occupancy string, e.g. `100`, `011`
 - `score_diff`: home score minus away score
 - `home_win_prob`
-

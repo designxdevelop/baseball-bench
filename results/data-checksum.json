@@ -1,13 +1,13 @@
 {
-  "checksum": "4e8f28c85cc3da1625f081aaed3835ccfd351f2ce8beefc98114bc411de83ec8",
-  "database_path": "test_manager_plan_preserves_bu0/baseball.duckdb",
-  "seed_hash": "86a691f987f45ef8164a54b833f844cb76431e5d0d5ff07ab369bda79a2e3b33",
+  "checksum": "ab24f5b3614f85302f63c6ecedbb12ba48437335efdabec37ca9c8f9d30d69b6",
+  "database_path": "artifacts/baseball.duckdb",
+  "seed_hash": "7d217e6cd759912679a6b6310042076ec964ec39e8fb0aba765d8dcf79f93a91",
   "table_counts": {
-    "batting": 29,
-    "games": 9,
-    "pitching": 18,
-    "players": 17,
-    "teams": 3,
+    "batting": 751,
+    "games": 2430,
+    "pitching": 1037,
+    "players": 1468,
+    "teams": 30,
     "win_probabilities": 12
   }
 }

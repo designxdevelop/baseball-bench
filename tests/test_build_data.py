@@ -14,5 +14,4 @@ def test_build_database_creates_expected_tables(tmp_path):
         team_rows = conn.execute("select count(*) from teams").fetchone()[0]
 
     assert batting_rows == result.table_counts["batting"]
-    assert team_rows == 3
-
+    assert team_rows == 30

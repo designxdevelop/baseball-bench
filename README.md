@@ -1,6 +1,6 @@
 # baseball-bench
 
-`baseball-bench` is a local-first baseball benchmark for evaluating AI models on research, tactical decisions, roster construction, and manager-style league play.
+`baseball-bench` is a local-first baseball benchmark for evaluating AI models on research, tactical decisions, roster construction, and manager-style league play against a pinned 2025 MLB snapshot.
 
 The core idea is to separate different baseball skills instead of collapsing everything into one noisy league table:
 
@@ -10,7 +10,7 @@ The core idea is to separate different baseball skills instead of collapsing eve
 - Can it manage equivalent talent better than other models?
 - What happens when every model builds and manages its own team?
 
-The benchmark uses a deterministic seed dataset and a local simulator. Model calls are used for research answers, isolated tactical decisions, GM roster construction, and manager plans. The simulator does not call a model for every pitch or plate appearance.
+The benchmark uses a checked-in 2025 MLB snapshot and a local simulator. Model calls are used for research answers, isolated tactical decisions, GM roster construction, and manager plans. The simulator does not call a model for every pitch or plate appearance.
 
 ## Quickstart
 
@@ -28,7 +28,44 @@ If you are using the checked-in virtualenv directly:
 .venv/bin/baseball-bench run-bench --baseline --league-games 3
 ```
 
-The baseline requires no API key. It rebuilds the deterministic DuckDB database, runs the SQL and win-probability baselines, creates heuristic GM/manager plans, runs a small controlled league, and writes a leaderboard.
+The baseline requires no API key. It rebuilds the local DuckDB database from the checked-in 2025 MLB snapshot, runs the SQL and win-probability baselines, creates heuristic GM/manager plans, runs a small controlled league, and writes a leaderboard.
+
+Refresh the pinned MLB snapshot from the official MLB API when needed:
+
+```bash
+.venv/bin/python scripts/refresh-mlb-seed 2025
+```
+
+## Public Deploy On Cloudflare Workers
+
+This repo can publish the generated benchmark output as a public static site on Cloudflare Workers without moving the Python simulator into the Worker runtime.
+
+What gets deployed:
+
+- the full `results/` tree as static assets
+- a tiny Worker that serves `/` as `results/site/index.html`
+- saved run history under `results/runs/...` when present
+
+One-time setup:
+
+```bash
+npm install
+npx wrangler login
+```
+
+Build the public site from your current local results:
+
+```bash
+npm run cf:build
+```
+
+Deploy the current results to your Worker:
+
+```bash
+npm run cf:deploy
+```
+
+That will publish to a `*.workers.dev` URL first. Once you register a domain and add it to Cloudflare, attach it as a custom domain for this Worker in the Cloudflare dashboard or by adding a `routes` entry with `custom_domain = true` in `wrangler` config.
 
 ## OpenRouter Runs
 
@@ -40,7 +77,7 @@ export OPENROUTER_API_KEY=...
 uv run scripts/run-bench \
   --model openai/gpt-5.5 \
   --model anthropic/claude-opus-4.8 \
-  --league-games 12
+  --mode public-refresh
 ```
 
 If no model flags are passed, `run-bench` uses the curated OpenRouter bucket:
@@ -53,16 +90,39 @@ If no model flags are passed, `run-bench` uses the curated OpenRouter bucket:
 - `qwen/qwen3.6-35b-a3b`
 - `google/gemini-3.1-pro-preview`
 
-Recommended full default bucket run:
+Recommended public refresh bucket run:
 
 ```bash
-uv run scripts/run-bench --league-games 12
+uv run scripts/run-bench --mode public-refresh
 ```
 
 Equivalent venv command:
 
 ```bash
-.venv/bin/baseball-bench run-bench --league-games 12
+.venv/bin/baseball-bench run-bench --mode public-refresh
+```
+
+### Eval Modes
+
+`run-bench`, `run-league`, `run-open-league`, and `estimate-cost` support two runtime modes:
+
+- `public-refresh`: fast publish-oriented default. Uses 6 sampled controlled league games and caps external live manager calls at 2 per team per game, starting in inning 8 with score gap 2 or less.
+- `deep-eval`: slower opt-in evaluation. Uses 12 sampled league games and caps external live manager calls at 5 per team per game, starting in inning 7 with score gap 3 or less.
+
+Low-level overrides are available for experiments:
+
+```bash
+.venv/bin/baseball-bench run-bench \
+  --mode deep-eval \
+  --live-call-start-inning 7 \
+  --live-call-max-score-gap 3 \
+  --max-live-calls-per-team 5
+```
+
+Open League is still opt-in during a full benchmark run:
+
+```bash
+.venv/bin/baseball-bench run-bench --mode deep-eval --enable-open-league
 ```
 
 ## Track Overview
@@ -186,6 +246,8 @@ League scores:
 - Elo.
 - Head-to-head table.
 - Average decisions per game.
+- Average live model calls per game.
+- Evaluation mode and live-call policy.
 
 Progress files are written before, during, and after league play so a run can be checked for stalls. The progress JSON includes:
 
@@ -195,6 +257,8 @@ Progress files are written before, during, and after league play so a run can be
 - `remaining_games`
 - `current_game`
 - `last_completed_game`
+- `evaluation_mode`
+- `eval_config`
 - live standings
 - head-to-head summary
 
@@ -232,11 +296,12 @@ uv run python -m baseball_bench.cli run-open-league --offline-gm --league-games 
 
 Avoid full matrix league runs for routine OpenRouter testing. With many models, full directed round-robin schedules grow quickly and can take a long time.
 
-Use `--league-games` for sampled, seeded schedules:
+Use `--mode` first, and `--league-games` only when you want to override the mode default:
 
 - Smoke: `--league-games 3`
-- Normal baseline: `--league-games 12`
-- Stronger signal: `--league-games 18`
+- Public refresh default: `--mode public-refresh`
+- Deep eval default: `--mode deep-eval`
+- Stronger signal: `--mode deep-eval --league-games 18`
 - Full matrix: `--full-league`
 
 `--games` controls games per directed matchup when running the full matrix. By default, the CLI uses sampled league games unless `--full-league` is passed.
@@ -245,14 +310,14 @@ Examples:
 
 ```bash
 uv run scripts/run-bench --league-games 3
-uv run scripts/run-bench --league-games 12
-uv run scripts/run-bench --league-games 18
+uv run scripts/run-bench --mode public-refresh
+uv run scripts/run-bench --mode deep-eval
 uv run scripts/run-bench --full-league --games 2
 ```
 
 ## Local Matchup Simulator
 
-The league simulator is deterministic and local. It uses model outputs for roster and manager setup, then simulates games without per-pitch model calls.
+The league simulator is deterministic and local. It uses model outputs for roster and manager setup, then simulates games without per-pitch model calls. External live tactical calls are reserved for mode-controlled late-game/high-leverage spots.
 
 The current engine includes:
 
@@ -264,6 +329,7 @@ The current engine includes:
 - Bullpen roles, rest, leverage ordering, and cross-game bullpen recovery.
 - Batted-ball distribution for line drives, fly balls, ground balls, and popups instead of fixed singles/doubles/home-run rates.
 - Sacrifice fly handling on fly-ball outs.
+- Rich manager prompts for live tactical calls: score context, tying/go-ahead/save framing, batter handedness and stat summary, pitcher handedness/role/fatigue/times-through-order, park context, bench options, and bullpen role/rest/stat context.
 
 This gives the league more baseball texture while keeping runs cheap and reproducible.
 

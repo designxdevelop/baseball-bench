@@ -118,6 +118,7 @@ def estimate_costs(
     *,
     games_per_matchup: int = 6,
     league_games: int | None = None,
+    estimated_decisions_per_game: float | None = None,
     assumptions: TrackAssumptions | None = None,
     allow_network: bool = True,
 ) -> dict[str, Any]:
@@ -141,7 +142,7 @@ def estimate_costs(
     else:
         estimated_total_league_games = league_games
         league_games_per_model = (2 * league_games) / total_managers
-    estimated_decisions_per_game = 32.5
+    estimated_decisions_per_game = estimated_decisions_per_game or 32.5
     league_decisions_per_model = league_games_per_model * estimated_decisions_per_game
 
     per_model: list[dict[str, Any]] = []

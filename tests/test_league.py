@@ -2,17 +2,21 @@ import json
 from random import Random
 
 from baseball_bench.data import build_database
+from baseball_bench.core import ActionType, BenchOption, BullpenOption, DecisionOption, GameState, ManagerDecision
+from baseball_bench.tracks.league.eval_modes import LeagueEvalConfig
 from baseball_bench.tracks.league.engine import (
     HitterProfile,
     PitcherProfile,
     TeamRoster,
     _bullpen_candidates,
+    _decide_with_policy,
     _plate_appearance_outcome,
     _platoon_factor,
     _platoon_lineup,
 )
 from baseball_bench.tracks.league.plan import roster_from_plan
 from baseball_bench.tracks.league import run_league
+from baseball_bench.tracks.league.season import _league_progress_filename, _league_result_filename
 
 
 def test_league_is_deterministic_for_same_seed(tmp_path):
@@ -65,6 +69,7 @@ def test_league_writes_progress_snapshot(tmp_path):
     assert progress["remaining_games"] == 0
     assert progress["current_game"] is None
     assert progress["last_completed_game"]["game_number"] == 2
+    assert progress["last_completed_game"]["park_name"]
 
 
 def test_league_games_caps_sampled_schedule(tmp_path):
@@ -155,7 +160,9 @@ def test_manager_plan_preserves_bullpen_roles_and_roster_traits(tmp_path):
 
     assert "home_bullpen_min_rest" in game
     assert "away_bullpen_min_rest" in game
-    assert min(item["home_bullpen_min_rest"] for item in summary["games"]) < 100
+    assert "park_name" in game
+    assert "park_factor" in game
+    assert all(0 <= item["home_bullpen_min_rest"] <= 100 for item in summary["games"])
 
     roster = TeamRoster(
         lineup=[
@@ -206,3 +213,126 @@ def test_bullpen_candidates_respect_roles_and_rest():
 
     assert high_leverage[0].player_id == "rp1"
     assert tired_high_leverage[0].player_id == "rp2"
+
+
+def test_league_uses_compact_filenames_for_large_model_lists():
+    models = [f"openrouter/provider/super-long-model-name-{index}" for index in range(12)]
+    progress_name = _league_progress_filename(models, "controlled_league")
+    result_name = _league_result_filename(models, "controlled_league")
+
+    assert len(progress_name) < 255
+    assert len(result_name) < 255
+
+
+def test_eval_policy_caps_external_live_calls():
+    class CountingManager:
+        name = "openrouter/test-model"
+
+        def __init__(self):
+            self.calls = 0
+
+        def decide(self, state, options):
+            self.calls += 1
+            return ManagerDecision(action_id=options[-1].action_id, rationale="called")
+
+    manager = CountingManager()
+    state = GameState(
+        inning=7,
+        half="top",
+        outs=0,
+        home_team="home",
+        away_team="away",
+        batting_team="away",
+        fielding_team="home",
+        home_score=3,
+        away_score=2,
+        batter_name="Batter",
+        pitcher_name="Pitcher",
+    )
+    options = [
+        DecisionOption(action_id=ActionType.LET_HIT.value, action_type=ActionType.LET_HIT, label="Let hit"),
+        DecisionOption(action_id=ActionType.STEAL.value, action_type=ActionType.STEAL, label="Steal"),
+    ]
+
+    public_decision, public_live = _decide_with_policy(
+        manager,
+        state,
+        options,
+        eval_config=LeagueEvalConfig(),
+        live_call_counts={manager.name: 0},
+        team_name=manager.name,
+    )
+    deep_decision, deep_live = _decide_with_policy(
+        manager,
+        state,
+        options,
+        eval_config=LeagueEvalConfig(
+            evaluation_mode="deep-eval",
+            live_call_start_inning=7,
+            live_call_max_score_gap=3,
+            max_live_calls_per_team=1,
+        ),
+        live_call_counts={manager.name: 0},
+        team_name=manager.name,
+    )
+
+    assert public_live is False
+    assert public_decision.action_id == ActionType.LET_HIT.value
+    assert deep_live is True
+    assert deep_decision.action_id == ActionType.STEAL.value
+    assert manager.calls == 1
+
+
+def test_manager_prompt_context_includes_baseball_decision_inputs():
+    state = GameState(
+        inning=9,
+        half="bottom",
+        outs=0,
+        home_team="home",
+        away_team="away",
+        batting_team="home",
+        fielding_team="away",
+        home_score=2,
+        away_score=3,
+        batter_name="Charles Hicklen",
+        batter_bats="R",
+        batter_summary="2025 line approx AVG .280, OBP .340, SLG .470",
+        pitcher_name="Cole Ragans",
+        pitcher_throws="L",
+        pitcher_role="SP",
+        pitcher_summary="2025 rates K/9 10.2, BB/9 3.0, HR/9 0.9",
+        pitcher_fatigue=27,
+        times_through_order=4,
+        park_name="Kauffman Stadium",
+        park_factor=0.97,
+        bench=[
+            BenchOption(
+                player_id="h1",
+                name="Bench Bat",
+                bats="L",
+                position="OF",
+                summary="2025 line approx AVG .260, OBP .360, SLG .500",
+            )
+        ],
+        bullpen=[
+            BullpenOption(
+                player_id="p1",
+                name="Closer",
+                throws="R",
+                role="closer",
+                stamina=84,
+                summary="2025 rates K/9 12.0, BB/9 2.4, HR/9 0.6",
+            )
+        ],
+    )
+
+    prompt_context = state.manager_prompt_context()
+
+    assert "Score context:" in prompt_context
+    assert "tying run at the plate" in prompt_context
+    assert "Batter context: Charles Hicklen, bats R" in prompt_context
+    assert "Pitcher context: Cole Ragans, throws L, role SP" in prompt_context
+    assert "fatigue batters faced in game 27" in prompt_context
+    assert "Park context: Kauffman Stadium" in prompt_context
+    assert "Bullpen options:" in prompt_context
+    assert "Bench options:" in prompt_context

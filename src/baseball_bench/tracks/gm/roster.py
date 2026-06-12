@@ -14,6 +14,13 @@ from baseball_bench.tracks.league.engine import HitterProfile, PitcherProfile, T
 from baseball_bench.utils import parse_jsonish, slugify, write_json
 
 GM_TIMEOUT_SECONDS = 60
+GM_HITTER_POOL_SIZE = 60
+GM_STARTER_POOL_SIZE = 18
+GM_RELIEVER_POOL_SIZE = 18
+GM_LINEUP_SIZE = 9
+GM_BENCH_SIZE = 4
+GM_ROTATION_SIZE = 5
+GM_BULLPEN_SIZE = 8
 
 
 @dataclass(frozen=True)
@@ -75,7 +82,7 @@ class PitcherPoolRow:
 
 def _player_pool(database_path: Path | None = None) -> tuple[list[HitterPoolRow], list[PitcherPoolRow]]:
     with connect_read_only(database_path or DATA_DB_PATH) as conn:
-        hitters = [
+        all_hitters = [
             HitterPoolRow(*row)
             for row in conn.execute(
                 """
@@ -99,7 +106,7 @@ def _player_pool(database_path: Path | None = None) -> tuple[list[HitterPoolRow]
                 """
             ).fetchall()
         ]
-        pitchers = [
+        all_pitchers = [
             PitcherPoolRow(*row)
             for row in conn.execute(
                 """
@@ -120,17 +127,35 @@ def _player_pool(database_path: Path | None = None) -> tuple[list[HitterPoolRow]
                 """
             ).fetchall()
         ]
+    hitters = sorted(
+        all_hitters,
+        key=lambda hitter: (hitter.rating, hitter.obp, hitter.slug, hitter.plate_appearances),
+        reverse=True,
+    )[:GM_HITTER_POOL_SIZE]
+    starters = sorted(
+        (pitcher for pitcher in all_pitchers if pitcher.role == "SP"),
+        key=lambda pitcher: (pitcher.rating, pitcher.strikeouts, pitcher.innings_pitched),
+        reverse=True,
+    )[:GM_STARTER_POOL_SIZE]
+    relievers = sorted(
+        (pitcher for pitcher in all_pitchers if pitcher.role == "RP"),
+        key=lambda pitcher: (pitcher.rating, pitcher.strikeouts, pitcher.innings_pitched),
+        reverse=True,
+    )[:GM_RELIEVER_POOL_SIZE]
+    pitchers = starters + relievers
     return hitters, pitchers
 
 
 def _roster_requirements(hitters: list[HitterPoolRow], pitchers: list[PitcherPoolRow]) -> dict[str, int]:
     starters = [pitcher for pitcher in pitchers if pitcher.role == "SP"]
     relievers = [pitcher for pitcher in pitchers if pitcher.role == "RP"]
+    lineup_size = min(GM_LINEUP_SIZE, len(hitters))
+    remaining_hitters = max(0, len(hitters) - lineup_size)
     return {
-        "lineup_size": min(9, len(hitters)),
-        "bench_size": max(0, len(hitters) - min(9, len(hitters))),
-        "rotation_size": min(5, len(starters)),
-        "bullpen_size": min(8, len(relievers)),
+        "lineup_size": lineup_size,
+        "bench_size": min(GM_BENCH_SIZE, remaining_hitters),
+        "rotation_size": min(GM_ROTATION_SIZE, len(starters)),
+        "bullpen_size": min(GM_BULLPEN_SIZE, len(relievers)),
     }
 
 
@@ -192,13 +217,14 @@ async def _generate_roster(
     requirements = _roster_requirements(hitters, pitchers)
     prompt = "\n".join(
         [
-            "Build a baseball roster from this player pool.",
+            "Build a 26-man MLB-style roster from this player pool.",
             "Return strict JSON with keys: lineup, bench, rotation, bullpen, rationale.",
             f"lineup must contain {requirements['lineup_size']} hitter player_id values.",
             f"bench must contain {requirements['bench_size']} hitter player_id values.",
             f"rotation must contain {requirements['rotation_size']} SP player_id values.",
             f"bullpen must contain {requirements['bullpen_size']} RP player_id values.",
             "Use each player at most once. Prefer baseball reasoning over alphabetical order.",
+            "This is a curated top-player pool, so omit good players only when fit or role balance justifies it.",
             "",
             _format_pool_for_prompt(hitters, pitchers),
         ]
@@ -376,15 +402,18 @@ def run_gm_rosters(
     output_dir: Path = RESULTS_DIR,
     allow_model_call: bool = True,
 ) -> list[dict[str, Any]]:
-    return [
-        run_gm_roster(
-            model_name,
-            database_path=database_path,
-            output_dir=output_dir,
-            allow_model_call=allow_model_call,
+    builds: list[dict[str, Any]] = []
+    for index, model_name in enumerate(model_names, start=1):
+        print(f"[baseball-bench] gm {index}/{len(model_names)} {model_name}", flush=True)
+        builds.append(
+            run_gm_roster(
+                model_name,
+                database_path=database_path,
+                output_dir=output_dir,
+                allow_model_call=allow_model_call,
+            )
         )
-        for model_name in model_names
-    ]
+    return builds
 
 
 def team_roster_from_build(

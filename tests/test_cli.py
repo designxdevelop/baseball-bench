@@ -36,7 +36,7 @@ def test_resolve_eval_models_defaults_to_curated_openrouter_pack():
 def test_run_bench_batches_models_into_single_inspect_call(monkeypatch):
     inspect_calls: list[tuple[str, list[str]]] = []
     summarized: list[tuple[str, str, Path]] = []
-    league_calls: list[tuple[list[str], int | None, str]] = []
+    league_calls: list[tuple[list[str], int | None, str, str, int]] = []
     snapshots: list[Path] = []
     manifest_updates: list[tuple[str, list[str]]] = []
     finalized: list[tuple[Path, list[str]]] = []
@@ -90,8 +90,14 @@ def test_run_bench_batches_models_into_single_inspect_call(monkeypatch):
     monkeypatch.setattr(
         cli,
         "run_league",
-        lambda models, games_per_matchup, seed, league_games, league_kind, rosters_by_model, output_dir: league_calls.append(
-            (list(models), league_games, league_kind)
+        lambda models, games_per_matchup, seed, league_games, league_kind, rosters_by_model, output_dir, eval_config: league_calls.append(
+            (
+                list(models),
+                league_games,
+                league_kind,
+                eval_config.evaluation_mode,
+                eval_config.max_live_calls_per_team,
+            )
         ),
     )
 
@@ -103,6 +109,11 @@ def test_run_bench_batches_models_into_single_inspect_call(monkeypatch):
         league_games=12,
         full_league=False,
         seed=7,
+        mode="deep-eval",
+        live_call_start_inning=None,
+        live_call_max_score_gap=None,
+        max_live_calls_per_team=None,
+        enable_open_league=False,
     )
 
     result = cli.run_bench(args)
@@ -138,6 +149,8 @@ def test_run_bench_batches_models_into_single_inspect_call(monkeypatch):
         ],
         12,
         "controlled_league",
+        "deep-eval",
+        5,
     )]
     assert manifest_updates == [
         ("analysis", []),
@@ -154,9 +167,10 @@ def test_run_cost_estimate_uses_estimator_and_prints_summary(monkeypatch, capsys
     monkeypatch.setattr(
         cli,
         "estimate_costs",
-        lambda model_names, games_per_matchup, league_games, allow_network: {
+        lambda model_names, games_per_matchup, league_games, estimated_decisions_per_game, allow_network: {
             "pricing_source": "test_source",
             "total_cost_usd": 12.34,
+            "estimated_decisions_per_game": estimated_decisions_per_game,
             "per_model": [
                 {
                     "model": "openrouter/openai/gpt-5.5",
@@ -172,11 +186,23 @@ def test_run_cost_estimate_uses_estimator_and_prints_summary(monkeypatch, capsys
     monkeypatch.setattr(cli, "write_cost_estimate", lambda summary: written.append(summary))
 
     result = cli.run_cost_estimate(
-        Namespace(model=["openai/gpt-5.5"], models=None, games=3, league_games=12, offline=True)
+        Namespace(
+            model=["openai/gpt-5.5"],
+            models=None,
+            games=3,
+            league_games=None,
+            full_league=False,
+            offline=True,
+            mode="public-refresh",
+            live_call_start_inning=None,
+            live_call_max_score_gap=None,
+            max_live_calls_per_team=None,
+        )
     )
 
     assert result == 0
     assert written[0]["total_cost_usd"] == 12.34
+    assert written[0]["estimated_decisions_per_game"] == 4
     stdout = capsys.readouterr().out
     assert "pricing_source=test_source" in stdout
     assert "total_cost_usd=12.3400" in stdout

@@ -22,6 +22,8 @@ Split the baseball benchmark into three distinct capabilities:
 3. **Open League**
    Models use their own GM-built rosters and manager plans in a head-to-head competition. This is the fun showpiece, but it is not treated as the cleanest apples-to-apples tactical score.
 
+For runtime policy and default operating modes, see [2026-06-11-eval-modes-plan.md](/Users/austin/code/dxd/baseball-bench/docs/specs/2026-06-11-eval-modes-plan.md).
+
 ## Track A - GM Roster Build
 
 **Purpose:** measure research, player evaluation, roster construction, constraint satisfaction, and explanation quality.

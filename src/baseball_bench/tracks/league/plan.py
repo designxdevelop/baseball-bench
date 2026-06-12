@@ -265,7 +265,8 @@ def run_manager_plans(
     allow_model_call: bool = True,
 ) -> dict[str, TeamRoster]:
     planned_rosters: dict[str, TeamRoster] = {}
-    for model_name in model_names:
+    for index, model_name in enumerate(model_names, start=1):
+        print(f"[baseball-bench] manager_plan {index}/{len(model_names)} {model_name}", flush=True)
         payload = run_manager_plan(
             model_name,
             roster,

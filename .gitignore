@@ -6,4 +6,5 @@ artifacts/
 logs/
 .env
 *.pyc
-
+node_modules/
+.wrangler/

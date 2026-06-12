@@ -52,9 +52,9 @@ QUESTION_SPECS = [
         "answer_type": "string",
     },
     {
-        "id": "best_ops_2024",
+        "id": "best_ops_2025",
         "tier": "medium",
-        "prompt": "Which player posted the best OPS in 2024 among hitters with at least 500 plate appearances?",
+        "prompt": "Which player posted the best OPS in 2025 among hitters with at least 500 plate appearances?",
         "sql": """
             with stats as (
               select
@@ -65,7 +65,7 @@ QUESTION_SPECS = [
                 as ops
               from batting b
               join players p on p.player_id = b.player_id
-              where b.season = 2024 and b.plate_appearances >= 500
+              where b.season = 2025 and b.plate_appearances >= 500
             )
             select answer from stats order by ops desc, answer asc limit 1
         """,
@@ -74,7 +74,7 @@ QUESTION_SPECS = [
     {
         "id": "best_run_diff_2025",
         "tier": "medium",
-        "prompt": "Which team had the best run differential in the 2025 seed schedule?",
+        "prompt": "Which team had the best run differential in the 2025 regular season?",
         "sql": """
             with team_runs as (
               select home_team_id as team_id, sum(home_score) as runs_for, sum(away_score) as runs_against from games where season = 2025 group by home_team_id
@@ -109,25 +109,39 @@ QUESTION_SPECS = [
         "answer_type": "string",
     },
     {
-        "id": "noah_kim_obp_2025",
+        "id": "hr_leader_obp_2025",
         "tier": "hard",
-        "prompt": "What was Noah Kim's on-base percentage in 2025? Return just the decimal value.",
+        "prompt": "What was the on-base percentage of the 2025 home run leader? Return just the decimal value.",
         "sql": """
+            with hr_leader as (
+              select player_id
+              from batting
+              where season = 2025
+              order by home_runs desc, player_id asc
+              limit 1
+            )
             select round((hits + walks + hit_by_pitch) * 1.0 / (at_bats + walks + hit_by_pitch + sacrifice_flies), 3) as answer
             from batting
-            where season = 2025 and player_id = 'p004'
+            where season = 2025 and player_id in (select player_id from hr_leader)
         """,
         "answer_type": "number",
         "tolerance": 0.001,
     },
     {
-        "id": "tyler_grant_total_hr",
+        "id": "batting_average_leader_home_runs_2025",
         "tier": "easy",
-        "prompt": "How many total home runs did Tyler Grant hit from 2023 through 2025 inclusive?",
+        "prompt": "How many home runs did the 2025 batting average leader hit?",
         "sql": """
-            select sum(home_runs) as answer
+            with batting_average_leader as (
+              select player_id
+              from batting
+              where season = 2025 and plate_appearances >= 500
+              order by cast(hits as double) / at_bats desc, player_id asc
+              limit 1
+            )
+            select home_runs as answer
             from batting
-            where player_id = 'p003' and season between 2023 and 2025
+            where season = 2025 and player_id in (select player_id from batting_average_leader)
         """,
         "answer_type": "number",
     },
@@ -166,7 +180,7 @@ QUESTION_SPECS = [
     {
         "id": "best_win_pct_2025",
         "tier": "hard",
-        "prompt": "Which team had the best winning percentage in the 2025 seed schedule?",
+        "prompt": "Which team had the best winning percentage in the 2025 regular season?",
         "sql": """
             with team_results as (
               select home_team_id as team_id, sum(case when home_score > away_score then 1 else 0 end) as wins, count(*) as games
@@ -223,4 +237,3 @@ def load_questions(version: str = "v1") -> list[AnalysisQuestion]:
     if not path.exists():
         return generate_questions(version=version)
     return [AnalysisQuestion.model_validate(item) for item in __import__("json").loads(path.read_text())]
-

@@ -9,7 +9,7 @@ def test_generate_questions_uses_database_answers(tmp_path):
     questions = generate_questions(database_path=database_path)
 
     highest_average = next(question for question in questions if question.id == "highest_batting_average_2025")
-    assert highest_average.expected_answer == "Mason Cole"
+    assert highest_average.expected_answer == "Aaron Judge"
 
 
 def test_analysis_scoring_honors_tolerance():
@@ -17,4 +17,3 @@ def test_analysis_scoring_honors_tolerance():
 
     assert value == 1.0
     assert metadata["observed_answer"] == "0.386"
-
